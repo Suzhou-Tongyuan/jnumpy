@@ -1,0 +1,255 @@
+import Libdl
+mutable struct PythonAPIStruct
+    Py_Initialize::cfunc_t(Cvoid)
+    Py_InitializeEx::cfunc_t(Cint, Cvoid)
+    Py_Finalize::cfunc_t(Cvoid)
+    Py_DecRef::cfunc_t(C.Ptr{PyObject}, Cvoid) # no except
+    Py_IncRef::cfunc_t(C.Ptr{PyObject}, Cvoid) # no except
+    PyGILState_Ensure::cfunc_t(PyGILState) # no except
+    PyGILState_Release::cfunc_t(PyGILState, Cvoid) # no except
+    # Py_IsNone::cfunc_t(C.Ptr{PyObject}, Cint) # no except
+    # Py_IsFalse::cfunc_t(C.Ptr{PyObject}, Cint) # no except
+    # Py_IsTrue::cfunc_t(C.Ptr{PyObject}, Cint) # no except
+    PyObject_Not::cfunc_t(C.Ptr{PyObject}, Except(-1, Cint)) # except -1
+    PyObject_IsTrue::cfunc_t(C.Ptr{PyObject}, Except(-1, Cint)) # except -1
+    PyObject_Call::cfunc_t(C.Ptr{PyObject}, C.Ptr{PyObject}, C.Ptr{PyObject}, Except(Py_NULLPTR, C.Ptr{PyObject}))
+    PyObject_CallObject::cfunc_t(C.Ptr{PyObject}, C.Ptr{PyObject}, Except(Py_NULLPTR, C.Ptr{PyObject}))
+    PyObject_CallFunctionObjArgs_variant_1arg::cfunc_t(C.Ptr{PyObject}, C.Ptr{PyObject}, Except(Py_NULLPTR, C.Ptr{PyObject}))
+    PyObject_CallFunctionObjArgs_variant_0arg::cfunc_t(C.Ptr{PyObject}, Except(Py_NULLPTR, C.Ptr{PyObject}))
+    PyObject_Hash::cfunc_t(C.Ptr{PyObject}, Except(-1, Py_hash_t)) # except -1
+    PyObject_Bytes::cfunc_t(C.Ptr{PyObject}, Except(Py_NULLPTR, C.Ptr{PyObject})) # except NULL
+    PyObject_Str::cfunc_t(C.Ptr{PyObject}, Except(Py_NULLPTR, C.Ptr{PyObject})) # except NULL
+    PyObject_Repr::cfunc_t(C.Ptr{PyObject}, Except(Py_NULLPTR, C.Ptr{PyObject})) # except NULL
+    PyObject_Length::cfunc_t(C.Ptr{PyObject}, Except(-1, Py_ssize_t)) # except -1
+    PyObject_RichCompare::cfunc_t(C.Ptr{PyObject}, C.Ptr{PyObject}, Cint, Except(Py_NULLPTR, C.Ptr{PyObject})) # except NULL
+    PyObject_SetAttr::cfunc_t(C.Ptr{PyObject}, C.Ptr{PyObject}, C.Ptr{PyObject}, Except(-1, Cint)) # except -1
+    PyObject_GetAttr::cfunc_t(C.Ptr{PyObject}, C.Ptr{PyObject}, Except(Py_NULLPTR, C.Ptr{PyObject})) # except NULL
+    PyObject_SetItem::cfunc_t(C.Ptr{PyObject}, C.Ptr{PyObject}, C.Ptr{PyObject}, Except(-1, Cint)) # except -1
+    PyObject_GetItem::cfunc_t(C.Ptr{PyObject}, C.Ptr{PyObject}, Except(Py_NULLPTR, C.Ptr{PyObject})) # except NULL
+    PyObject_GetIter::cfunc_t(C.Ptr{PyObject}, Except(Py_NULLPTR, C.Ptr{PyObject})) # except NULL
+    PyObject_Dir::cfunc_t(C.Ptr{PyObject}, Except(Py_NULLPTR, C.Ptr{PyObject})) # except NULL
+    PyObject_IsInstance::cfunc_t(C.Ptr{PyObject}, C.Ptr{PyObject}, Except(-1, Cint)) # except -1
+    PyUnicode_FromString::cfunc_t(Cstring, Except(Py_NULLPTR, C.Ptr{PyObject})) # except NULL
+    PyUnicode_AsUTF8AndSize::cfunc_t(C.Ptr{PyObject}, Ptr{Py_ssize_t}, Except(C_NULL, Ptr{Cchar}))
+    PyErr_Print::cfunc_t(Cvoid) # no except
+    PyErr_Occurred::cfunc_t(C.Ptr{PyObject}) # not set -> NULL
+    PyErr_SetString::cfunc_t(C.Ptr{PyObject}, Cstring, Cvoid) # no except
+    PyErr_SetObject::cfunc_t(C.Ptr{PyObject}, C.Ptr{PyObject}, Cvoid) # no except
+
+    PyErr_Fetch::cfunc_t(C.Ptr{C.Ptr{PyObject}}, C.Ptr{C.Ptr{PyObject}}, C.Ptr{C.Ptr{PyObject}}, Cvoid) # no except
+    PyErr_NormalizeException::cfunc_t(C.Ptr{C.Ptr{PyObject}}, C.Ptr{C.Ptr{PyObject}}, C.Ptr{C.Ptr{PyObject}}, Cvoid) # no except
+    PyException_SetTraceback::cfunc_t(C.Ptr{PyObject}, C.Ptr{PyObject}, Cvoid) # no except
+    PyErr_Clear::cfunc_t(Cvoid) # no except
+    PyExc_TypeError::C.Ptr{PyObject}
+    PyExc_IndexError::C.Ptr{PyObject}
+    PyExc_KeyError::C.Ptr{PyObject}
+    PyExc_ValueError::C.Ptr{PyObject}
+
+    PyTuple_SetItem::cfunc_t(C.Ptr{PyObject}, Py_ssize_t, C.Ptr{PyObject}, Except(-1, Cint)) # except -1
+    PyTuple_New::cfunc_t(Py_ssize_t, Except(Py_NULLPTR, C.Ptr{PyObject})) # except NULL
+
+    PyImport_ImportModule::cfunc_t(Cstring, Except(Py_NULLPTR, C.Ptr{PyObject})) # except NULL
+
+    PyDict_New::cfunc_t(Except(Py_NULLPTR, C.Ptr{PyObject})) # except NULL
+    PyDict_Type::C.Ptr{PyObject}
+    PyLong_Type::C.Ptr{PyObject}
+    PyFloat_Type::C.Ptr{PyObject}
+    PyComplex_Type::C.Ptr{PyObject}
+
+    PyLong_AsLongLong::cfunc_t(C.Ptr{PyObject}, Clonglong) # except -1 ana error occurred
+    PyFloat_AsDouble::cfunc_t(C.Ptr{PyObject}, Cdouble) # except -1.0 ana error occurred
+    PyComplex_AsCComplex::cfunc_t(C.Ptr{PyObject}, Py_complex) # except .real is -1.0 ana error occurred
+    
+    PyEval_EvalCode::cfunc_t(C.Ptr{PyObject}, C.Ptr{PyObject}, C.Ptr{PyObject}, Except(Py_NULLPTR, C.Ptr{PyObject}))
+    Py_CompileString::cfunc_t(Cstring, Cstring, Cint, Except(Py_NULLPTR, C.Ptr{PyObject}))
+    PythonAPIStruct() = new()
+end
+
+const PyAPI = PythonAPIStruct()
+
+struct UnsafeNew end
+struct UnsafeKnownNoRaise end
+
+
+mutable struct Py
+    ptr :: C.Ptr{PyObject}
+    function Py(::UnsafeNew, ptr::C.Ptr{PyObject}=Py_NULLPTR)
+        self = new(ptr)
+        finalizer(self) do x
+            if G_IsInitialized[]
+                PyAPI.Py_DecRef(unsafe_unwrap(x))
+            end
+        end
+        return self
+    end
+end
+
+Py(ptr::C.Ptr{PyObject}) = Py(UnsafeNew(), ptr)
+const G_PyBuiltin = Py(UnsafeNew(),)
+
+unsafe_unwrap(x::Py) = getfield(x, :ptr)
+function unsafe_set!(x::Py, p::C.Ptr{PyObject})
+    if unsafe_unwrap(x) !== Py_NULLPTR
+        error("Py object already set")
+    end
+    setfield!(x, :ptr, p)
+    nothing
+end
+
+"""
+see `unsafe_broaden_type(::Type{C.Ptr{O}})` at CPython.Defs.jl,
+where a compatible `cconvert` rule is required for `Py`.
+"""
+Base.cconvert(::Type{C.Ptr{PyObject}}, py::Py) = Base.cconvert(C.Ptr{PyObject}, unsafe_unwrap(py))
+Base.cconvert(::Type{C.Ptr{C.Ptr{PyObject}}}, py::Ref{C.Ptr{PyObject}}) = py
+Base.unsafe_convert(::Type{C.Ptr{C.Ptr{PyObject}}}, py::Ref{C.Ptr{PyObject}}) =
+    reinterpret(C.Ptr{C.Ptr{PyObject}}, Base.unsafe_convert(Ptr{C.Ptr{PyObject}}, py))
+
+@inline function WITH_GIL(f, ::UnsafeKnownNoRaise)
+    if is_calling_julia_from_python()
+        g = PyAPI.PyGILState_Ensure()
+        r = f()
+        PyAPI.PyGILState_Release(g)
+        return r
+    end
+    return f()
+end
+
+@inline function WITH_GIL(f)
+    if is_calling_julia_from_python()
+        g = PyAPI.PyGILState_Ensure()
+        try
+            return f()
+        finally
+            PyAPI.PyGILState_Release(g)
+        end
+    end
+    return f()
+end
+
+function endswith_decref(f, obs::C.Ptr{PyObject}...)
+    try
+        f(obs...)
+    finally
+        for ob in obs
+            PyAPI.Py_DecRef(ob)
+        end
+    end
+end
+const Py_eval_input = 258  # since 2011
+const Py_single_input = 256  # since 2011
+
+pyunsafe_compile_expr_str(x::AbstractString) = convert(String, x)
+function pyunsafe_compile_expr_str(x::String; filename::AbstractString="<string>")
+    PyAPI.Py_CompileString(x, filename, Py_eval_input)
+end
+
+function pyunsafe_eval_expr_str(x::String; filename::AbstractString="<string>")
+    local dict = C.Ptr{PyObject}(PyAPI.PyDict_Type)
+    endswith_decref(
+            pyunsafe_compile_expr_str(x; filename=filename),
+            PyAPI.PyObject_CallObject(dict, Py_NULLPTR),
+            PyAPI.PyObject_CallObject(dict, Py_NULLPTR)
+        ) do code, globals, locals
+
+        PyAPI.PyEval_EvalCode(code, globals, locals)
+    end
+end
+
+function pyunsafe_fetch_error()
+    t = Ref(Py_NULLPTR)
+    v = Ref(Py_NULLPTR)
+    b = Ref(Py_NULLPTR)
+    PyAPI.PyErr_NormalizeException(t, v, b)
+    if !py_isnull(b[])
+        PyAPI.PyException_SetTraceback(v[], b[])
+    end
+    (Py(t[]), Py(v[]), Py(b[]))
+end
+
+"""
+    PyException(x)
+
+Wraps the Python exception `x` as a Julia `Exception`.
+"""
+mutable struct PyException <: Exception
+    type::Py
+    value::Py
+    traceback::Py
+end
+
+function py_isnull(x::Py)
+    unsafe_unwrap(x) === Py_NULLPTR
+end
+
+function py_isnull(x::C.Ptr{PyObject})
+    x === Py_NULLPTR
+end
+
+
+function py_throw()
+    if !(G_IsInitialized[])
+        msg = capure_stdout() do
+            PyAPI.PyErr_Print()
+            PyAPI.PyErr_Clear()
+        end
+        error(msg)
+    end
+
+    local (t, v, b) = pyunsafe_fetch_error()
+    if py_isnull(t)
+        error("no exception")
+    end
+    if py_isnull(v)
+        v = G_PyBuiltin.None
+    end
+    if py_isnull(b)
+        b = G_PyBuiltin.None
+    end
+    throw(PyException(t, v, b))
+end
+
+function Base.show(io::IO, e::Py)
+    x = Py(PyAPI.PyObject_Repr(unsafe_unwrap(e)))
+    size_ref = Ref(0)
+    buf = PyAPI.PyUnicode_AsUTF8AndSize(x , size_ref)
+    print(io, "Py(", Base.unsafe_string(buf, size_ref[]), ")")
+end
+
+Base.showerror(io::IO, e::PyException) = _showerror(io, e, nothing, backtrace=false)
+Base.showerror(io::IO, e::PyException, bt; backtrace=true) = _showerror(io, e, bt; backtrace=backtrace)
+function _showerror(io::IO, e::PyException, bt; backtrace=true)
+    endswith_decref(PyAPI.PyUnicode_FromString("traceback")) do ptr_traceback
+        mod_traceback = G_PyBuiltin.__import__(Py(ptr_traceback))
+        msg =
+            capure_stdout() do
+                mod_traceback.print_exception(e.type, e.value, e.traceback)
+            end
+        print(io, msg)
+    end
+end
+
+# mutable struct PyConstantStore
+#     Names :: Dict{String, Int}
+#     Initializer :: Dict{String, Any}
+#     Constants :: Vector{Py}
+#     Initialized :: Bool
+#     PyConstantStore() = PyConstantStore(Dict(), Dict(), Py[], false)
+# end
+
+# const SYM_PY_CONST_STORE = "_?RAWPY_PY_CONST_STORE"
+
+# function pyconstantize(store::PyConstantStore, ex)
+#     if ex isa Union{Int, 
+# end
+
+# macro pyconstantize(ex)
+#     store = if !isdefined(__module__, SYM_PY_CONST_STORE)
+#         store = PyConstantStore()
+#         Base.eval(__module__, :(const $SYM_PY_CONST_STORE = $PyConstantStore()))
+#         store
+#     else
+#         getfield(__module__, SYM_PY_CONST_STORE) :: PyConstantStore
+#     end
+#     pyconstantize(store, ex)
+# end
