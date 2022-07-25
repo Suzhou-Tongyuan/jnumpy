@@ -19,7 +19,7 @@ function cfunc_t(@nospecialize(args::DataType...))
     return CPyFunction{Tuple{args[1:end-1]...}, args[end]}
 end
 
-unsafe_broaden_type(::Type{Cstring}) = AbstractString
+unsafe_broaden_type(::Type{Cstring}) = Union{Cstring, AbstractString}
 unsafe_broaden_type(::Type{Cchar}) = Union{Char, UInt8}
 unsafe_broaden_type(::Union{Type{Cfloat}, Type{Cdouble}}) = AbstractFloat
 unsafe_broaden_type(::Union{Type{Csize_t}, Type{Cshort}, Type{Cint}}) = Integer
@@ -94,16 +94,35 @@ const Py_ssize_t = Cssize_t
 const Py_hash_t = Cssize_t
 
 Base.@kwdef struct PyMethodDef
-    ml_name  :: Cstring
-    ml_meth  :: PyCFunction
-    ml_flags :: Cint
-    ml_doc   :: Cstring
+    ml_name  :: Cstring = C_NULL
+    ml_meth  :: PyCFunction = C_NULL
+    ml_flags :: Cint = 0
+    ml_doc   :: Cstring = C_NULL
 end
 
 Base.@kwdef struct PyObject
     # assumes _PyObject_HEAD_EXTRA is empty
     refcnt::Py_ssize_t = 0
     type::Ptr{Cvoid} = C_NULL # really is Ptr{PyObject} or Ptr{PyTypeObject} but Julia 1.3 and below get the layout incorrect when circular types are involved
+end
+
+Base.@kwdef struct Py_buffer
+    buf::Ptr{Cvoid} = C_NULL
+    obj::Ptr{Cvoid} = C_NULL
+    len::Py_ssize_t = 0
+    itemsize::Py_ssize_t = 0
+    readonly::Cint = 0
+    ndim::Cint = 0
+    format::Cstring = C_NULL
+    shape::Ptr{Py_ssize_t} = C_NULL
+    strides::Ptr{Py_ssize_t} = C_NULL
+    suboffsets::Ptr{Py_ssize_t} = C_NULL
+    internal::Ptr{Cvoid} = C_NULL
+end
+
+Base.@kwdef struct PyBufferProcs
+    get::Ptr{Cvoid} = C_NULL # (o, Ptr{Py_buffer}, Cint) -> Cint
+    release::Ptr{Cvoid} = C_NULL # (o, Ptr{Py_buffer}) -> Cvoid
 end
 
 Base.@kwdef struct PyTypeObject
@@ -169,15 +188,6 @@ end
 struct Py_complex
     real::Cdouble
     imag::Cdouble
-end
-
-"""
-A thin Python wrapper wrapping a Julia object.
-"""
-Base.@kwdef struct PyJuliaWrapObject
-    ob_base::PyObject = PyObject()
-    weaklist::C.Ptr{PyObject} = C_NULL
-    slot::Int = 0
 end
 
 const SIZE_PyGILState = sizeof(Cint) * 8

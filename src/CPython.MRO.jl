@@ -8,6 +8,10 @@ end
     Py(PyAPI.PyObject_GetAttr(self, attribute_symbol_to_pyobject(name)))
 end
 
+@noinline function Base.hasproperty(self::Py, name::Symbol)::Py
+    Py(PyAPI.PyObject_GetAttr(self, attribute_symbol_to_pyobject(name)))
+end
+
 @noinline function Base.setproperty!(self::Py, name::Symbol, value::Py)::Py
     PyAPI.PyObject_SetAttr(self, attribute_symbol_to_pyobject(name), value)
     value
@@ -18,7 +22,7 @@ end
 
 Create a Python tuple from variadic arguments.
 """
-function py_tuple_create(x::Vararg{Py, N})::Py where N
+function py_tuple_create(args::Vararg{Py, N})::Py where N
     argtuple = PyAPI.PyTuple_New(N)
     unroll_do!(Val(N), argtuple, args) do i, argtuple, args
         PyAPI.Py_IncRef(args[i])
@@ -65,7 +69,7 @@ function (py::Py)(args::Vararg{Py, N}; kwargs...) where N
         argdict = PyAPI.PyDict_New()
         try
             unroll_do!(Val(N), argtuple, args) do i, argtuple, args
-                PyAPI.Py_IncRef(argtuple[i])
+                PyAPI.Py_IncRef(args[i])
                 PyAPI.PyTuple_SetItem(argtuple, i-1, args[i])
             end
             for (key::Symbol, arg::Py) in kwargs
@@ -163,4 +167,45 @@ function py_coerce(::Type{T}, py::Py) where T <: Complex
         py_throw()
     end
     convert(T, complex(d.real, d.imag))
+end
+
+function py_equal_identity(x::Union{Py, C.Ptr{PyObject}}, y::Union{Py, C.Ptr{PyObject}})
+    unsafe_unwrap(x) === unsafe_unwrap(y)
+end
+
+function py_cast(::Type{Bool}, o::Py)
+    py_equal_identity(o, PyAPI.Py_True) && return true
+    py_equal_identity(o, PyAPI.Py_False) && return false
+    return PyAPI.PyObject_IsTrue(o) != 0
+end
+
+function py_cast(::Type{String}, o::Py)
+    size_ref = Ref(0)
+    buf = PyAPI.PyUnicode_AsUTF8AndSize(o , size_ref)
+    return Base.unsafe_string(buf, size_ref[])
+end
+
+function py_cast(::Type{Py}, o::Tuple)
+    n = length(o)
+    vec = Vector{Py}(undef, n)
+    unroll_do!(Val(n), o) do i, o
+        vec[i] = py_cast(Py, o[i])
+    end
+    py_tuple_create(vec...)
+end
+
+function py_cast(::Type{Py}, o::Bool)
+    o ? PyAPI.Py_True : PyAPI.Py_False
+end
+
+function py_cast(::Type{Py}, o::Integer)
+    Py(PyAPI.PyLong_FromLongLong(convert(Clonglong, o)))
+end
+
+function py_cast(::Type{Py}, o::String)
+    return Py(PyAPI.PyUnicode_FromString(o))
+end
+
+function py_builtin_get()
+    return G_PyBuiltin
 end

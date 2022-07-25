@@ -1,6 +1,9 @@
 module CPython
 import RawPython.C
 import RawPython.Utils: capure_stdout, unroll_do!
+export py_builtin_get, py_throw, WITH_GIL, GILNoRaise
+export py_cast, py_coerce
+export Py
 
 const CF_RAWPY_MODE = "RAWPY_MODE"
 const CF_RAWPY_PY_APIPTR = "RAWPY_PY_APIPTR"
@@ -35,9 +38,14 @@ let ln = LineNumberNode((@__LINE__), Symbol(@__FILE__))
     end
 end
 
+include("CPython.NumPy.jl")
+include("CPython.Julia.jl")
+
 function __init__()
     empty!(G_OB_POOL)
     empty!(G_ATTR_SYM_MAP)
+    __init_numpy__()
+    __init_julia_wrap__()
 end
 
 end

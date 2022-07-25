@@ -39,7 +39,7 @@ Base.convert(::Type{P}, ptr::UInt) where P <: Ptr = reinterpret(P, ptr)
 
 Base.@inline Base.getproperty(ptr::Ptr, symbol::Symbol) = GEP(ptr, Val(symbol))
 Base.@inline Base.getindex(ptr::Ptr{T}) where T = Base.unsafe_load(reinterpret(Base.Ptr{T}, ptr))
-Base.@inline Base.setindex!(ptr::Ptr{T}, v) where T = unsafe_store!(reinterpret(Base.Ptr{T}, ptr), convert(T, v))
+Base.@inline Base.setindex!(ptr::Ptr{T}, v) where T = Base.unsafe_store!(reinterpret(Base.Ptr{T}, ptr), convert(T, v))
 
 function (ptr::Ptr{T} + i::Integer) where T
     Ptr{T}(reinterpret(Base.Ptr{Cvoid}, ptr) + i)

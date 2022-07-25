@@ -1,0 +1,147 @@
+using MLStyle: @match
+export get_numpy
+
+const Py_intptr_t = Cssize_t  # TODO: verify for portability
+
+const NPY_ARRAY_C_CONTIGUOUS = Cint(0x0001)
+const NPY_ARRAY_F_CONTIGUOUS = Cint(0x0002)
+const NPY_ARRAY_ALIGNED = Cint(0x0100)
+const NPY_ARRAY_NOTSWAPPED = Cint(0x0200)
+const NPY_ARRAY_WRITEABLE = Cint(0x0400)
+const NPY_ARR_HAS_DESCR = Cint(0x0800) 
+
+const RAWPY_SUPPORTED_NO_COPY_NP_FLAG = NPY_ARRAY_ALIGNED | NPY_ARRAY_WRITEABLE
+
+function checkbit(x::Cint, bits::Cint)
+    return (x & bits) === bits
+end
+
+Base.@kwdef struct PyArrayInterface
+    two::Cint = 2
+    nd::Cint = 0
+    typekind::Cchar = 0
+    itemsize::Cint = 0
+    flags::Cint = 0
+    shape::C.Ptr{Py_intptr_t} = C_NULL
+    strides::C.Ptr{Py_intptr_t} = C_NULL
+    data::Ptr{Cvoid} = C_NULL
+    descr::C.Ptr{PyObject} = C_NULL
+end
+
+const G_numpy = Py(UnsafeNew())
+
+function __init_numpy__()
+    unsafe_set!(G_numpy, Py_NULLPTR)
+    nothing
+end
+
+function get_numpy()
+    if py_isnull(G_numpy)
+        x = G_PyBuiltin.__import__(py_cast(Py, "numpy"))
+        PyAPI.Py_IncRef(x)
+        unsafe_set!(G_numpy, unsafe_unwrap(x))
+    end
+    return G_numpy
+end
+
+const supported_kinds = Cchar['i', 'u', 'f', 'c']
+
+const SupportedNDim = 32  # hard coded in numpy
+const ShapeType = Union{(Tuple{repeat([Py_intptr_t], i)...} for i = 1:SupportedNDim)...}
+
+function register_root(x::Py, jo::Array)
+    ptr = unsafe_unwrap(x)
+    PyAPI.Py_IncRef(ptr)
+    finalizer(jo) do _
+        PyAPI.Py_DecRef(ptr)
+    end
+    jo
+end
+
+function _get_capsule_ptr(x::Py)
+    u = PyAPI.PyCapsule_GetName(x)
+    if u == C_NULL && PyAPI.PyErr_Occurred() != Py_NULLPTR
+        py_throw()
+    end
+    ptr = PyAPI.PyCapsule_GetPointer(x, u)
+    if ptr == C_NULL && PyAPI.PyErr_Occurred() != Py_NULLPTR
+        py_throw()
+    end
+    return ptr
+end
+
+function from_ndarray(x::Py)
+    # if PyAPI.PyObject_IsInstance(x, G_numpy.ndarray) == 0
+    #     error("from_ndarray: $x is not an ndarray")
+    # end
+    np = get_numpy()
+    if PyAPI.PyObject_HasAttr(x, attribute_symbol_to_pyobject(:__array_struct__)) != 1
+        error("from_ndarray: $x has no __array_struct__")
+        # x = G_numpy.copy(x, order=py_cast(Py, "C"))
+    end
+    __array_struct__ = x.__array_struct__
+    ptr = C.Ptr{PyArrayInterface}(_get_capsule_ptr(__array_struct__))
+    info = ptr[] :: PyArrayInterface
+    info.typekind in supported_kinds || error("unsupported numpy dtype: $(Char(ptr.typekind))")
+    # TODO: support no-copy transpose in the future
+    flags = info.flags
+    if (!checkbit(flags, NPY_ARRAY_F_CONTIGUOUS) ||
+        !checkbit(flags, RAWPY_SUPPORTED_NO_COPY_NP_FLAG))
+        x = np.copy(x, order=py_cast(Py, "F"))
+        __array_struct__ = x.__array_struct__
+        ptr = C.Ptr{PyArrayInterface}(_get_capsule_ptr(__array_struct__))
+        info = ptr[] :: PyArrayInterface
+    end
+    
+    # TODO: exception check
+    shape = Tuple(Int(i) 
+        for i in unsafe_wrap(Array, convert(Ptr{Py_intptr_t}, info.shape), Int(info.nd); own=false)) :: ShapeType
+
+    @match (Char(info.typekind), Int(info.itemsize)) begin
+        ('i', 1) =>
+            register_root(x,
+                unsafe_wrap(Array, convert(Ptr{Int8}, info.data), shape; own=false))
+        ('i', 2) =>
+            register_root(x,
+                unsafe_wrap(Array, convert(Ptr{Int16}, info.data), shape; own=false))
+        ('i', 4) =>
+            register_root(x,
+                unsafe_wrap(Array, convert(Ptr{Int32}, info.data), shape; own=false))
+        ('i', 8) =>
+            register_root(x,
+                unsafe_wrap(Array, convert(Ptr{Int64}, info.data), shape; own=false))
+        ('f', 2) =>
+            register_root(x,
+                unsafe_wrap(Array, convert(Ptr{Float16}, info.data), shape; own=false))
+        ('f', 4) =>
+                register_root(x,
+                    unsafe_wrap(Array, convert(Ptr{Float32}, info.data), shape; own=false))
+        ('f', 8) =>
+                register_root(x,
+                    unsafe_wrap(Array, convert(Ptr{Float64}, info.data), shape; own=false))
+        ('u', 1) =>
+            register_root(x,
+                unsafe_wrap(Array, convert(Ptr{UInt8}, info.data), shape; own=false))
+        ('u', 2) =>
+            register_root(x,
+                unsafe_wrap(Array, convert(Ptr{UInt16}, info.data), shape; own=false))
+        ('u', 4) =>
+            register_root(x,
+                unsafe_wrap(Array, convert(Ptr{UInt32}, info.data), shape; own=false))
+        ('u', 8) =>
+            register_root(x,
+                unsafe_wrap(Array, convert(Ptr{UInt64}, info.data), shape; own=false))
+        ('c', 4) => 
+            register_root(x,
+                unsafe_wrap(Array, convert(Ptr{ComplexF16}, info.data), shape; own=false))
+        ('c', 8) => 
+            register_root(x,
+                unsafe_wrap(Array, convert(Ptr{ComplexF32}, info.data), shape; own=false))
+        ('c', 16) => 
+            register_root(x,
+                unsafe_wrap(Array, convert(Ptr{ComplexF64}, info.data), shape; own=false))
+        (code, nbytes) =>
+            error("unsupported numpy dtype: $(Char(code)) $(nbytes)")        
+    end
+end
+
