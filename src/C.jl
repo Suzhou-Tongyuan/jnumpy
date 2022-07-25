@@ -1,5 +1,6 @@
 baremodule C
 
+import Serialization
 import Base
 import Base: +, -, *, /
 using Base: sizeof, Cvoid, Cstring, Cint, Type, Val, reinterpret, convert
@@ -46,5 +47,14 @@ function (ptr::Ptr{T} + i::Integer) where T
 end
 
 is_nullptr(x::C.Ptr) = reinterpret(Base.Ptr{Cvoid}, x) === Base.C_NULL
+
+function Serialization.serialize(s::Serialization.AbstractSerializer, o::Ptr)
+    Serialization.writetag(s, Serialization.OBJECT_TAG)
+    Base.Serializer.serialize(s, Ptr)
+end
+
+function Serialization.deserialize(s::Serialization.AbstractSerializer, ::Type{P}) where P <: Ptr
+    return P(C_NULL)
+end
 
 end

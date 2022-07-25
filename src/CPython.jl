@@ -1,10 +1,12 @@
 module CPython
+using MLStyle: @match, @switch
 import RawPython.C
-import RawPython.Utils: capure_stdout, unroll_do!
+import RawPython.Utils: capure_out, unroll_do!
 export py_builtin_get, py_throw, WITH_GIL, GILNoRaise
 export py_cast, py_coerce
 export Py
 
+const G_IsInitialized = Ref(false)
 const CF_RAWPY_MODE = "RAWPY_MODE"
 const CF_RAWPY_PY_APIPTR = "RAWPY_PY_APIPTR"
 const CF_RAWPY_PY_DLL = "RAWPY_PY_DLL"
@@ -40,8 +42,11 @@ end
 
 include("CPython.NumPy.jl")
 include("CPython.Julia.jl")
+include("CPython.Dev.jl")
+
 
 function __init__()
+    G_IsInitialized[] = false
     empty!(G_OB_POOL)
     empty!(G_ATTR_SYM_MAP)
     __init_numpy__()

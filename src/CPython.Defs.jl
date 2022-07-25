@@ -1,6 +1,7 @@
 struct CPyFunction{Params<:Tuple, Return}
     ptr :: Ptr{Cvoid}
 end
+
 # function Base.show(io::IO, ::Type{CPyFunction{Params, Return}}) where {Params, Return}
 #     if Params isa DataType && Return isa DataType
 #         print(io, "PyC(" * join(collect(Params.parameters), ", ") * ")::" * string(Return))
@@ -194,7 +195,6 @@ const SIZE_PyGILState = sizeof(Cint) * 8
 primitive type PyGILState SIZE_PyGILState end
 
 const Py_NULLPTR = C.Ptr{PyObject}(C_NULL)
-const G_IsInitialized = Ref(false)
 
 const Py_LT = Cint(0)
 const Py_LE = Cint(1)

@@ -38,9 +38,9 @@ end
 
 @noinline function Base.setindex!(self::Py, value::Py, ind, inds::Py...)::Py
     if isempty(inds)
-        PyAPI.PyObject_SetItem(self, value, ind)
+        PyAPI.PyObject_SetItem(self, ind, value)
     else
-        PyAPI.PyObject_SetItem(self, py_tuple_create(ind, inds...))
+        PyAPI.PyObject_SetItem(self, py_tuple_create(ind, inds...), value)
     end
     value
 end
@@ -145,7 +145,7 @@ Perform no cast but use the underlying type for coercions.
 """
 py_coerce(t, py::Py)
 
-function py_coerce(::Type{T}, py::Py) where T <: Integer
+function py_coerce(::Type{T}, py::Py)::T where T <: Integer
     i = PyAPI.PyLong_AsLongLong(py)
     if i == -1 && PyAPI.PyErr_Occurred() != Py_NULLPTR
         py_throw()
@@ -153,7 +153,7 @@ function py_coerce(::Type{T}, py::Py) where T <: Integer
     convert(T, i)
 end
 
-function py_coerce(::Type{T}, py::Py) where T <: AbstractFloat
+function py_coerce(::Type{T}, py::Py)::T where T <: AbstractFloat
     d = PyAPI.PyFloat_AsDouble(py)
     if d == -1.0 && PyAPI.PyErr_Occurred() != Py_NULLPTR
         py_throw()
@@ -161,12 +161,39 @@ function py_coerce(::Type{T}, py::Py) where T <: AbstractFloat
     convert(T, d)
 end
 
-function py_coerce(::Type{T}, py::Py) where T <: Complex
+function py_coerce(::Type{T}, py::Py)::T where T <: Complex
     d = PyAPI.PyComplex_AsCComplex(py) :: Py_complex
     if d.real == -1.0 && PyAPI.PyErr_Occurred() != Py_NULLPTR
         py_throw()
     end
     convert(T, complex(d.real, d.imag))
+end
+
+function py_coerce(::Type{TArray}, py::Py)::TArray where {TArray <: StridedArray}
+    np = get_numpy()
+    if PyAPI.PyObject_IsInstance(py, np.ndarray) == 0
+        py_seterror!(G_PyBuiltin.ValueError, "expected numpy array")
+        py_throw()
+    end
+    convert(TArray, from_ndarray(py))
+end
+
+function unsafe_pytuple_get(o::Py, i::Integer)
+    item = PyAPI.PyTuple_GetItem(o, i)
+    PyAPI.Py_IncRef(item)
+    return Py(item)
+end
+
+@generated function py_coerce(::Type{T}, py::Py)::T where T <: Tuple
+    T isa DataType && :(error("$T is not a data type"))
+    result = Expr(:tuple, [:($py_coerce($t, unsafe_pytuple_get(py, $(i - 1)))) for (i, t) in enumerate(T.parameters)]...)
+    quote
+        if $PyAPI.PyObject_IsInstance(py,  $PyAPI.PyTuple_Type) == 0
+            $PyAPI.PyErr_SetString($PyAPI.PyExc_TypeError[], "expected a tuple")
+            $py_throw()
+        end
+        $result
+    end
 end
 
 function py_equal_identity(x::Union{Py, C.Ptr{PyObject}}, y::Union{Py, C.Ptr{PyObject}})
@@ -198,12 +225,20 @@ function py_cast(::Type{Py}, o::Bool)
     o ? PyAPI.Py_True : PyAPI.Py_False
 end
 
+function py_cast(::Type{Py}, o::AbstractFloat)
+    return Py(PyAPI.PyFloat_FromDouble(convert(Cdouble, o)))
+end
+
 function py_cast(::Type{Py}, o::Integer)
     Py(PyAPI.PyLong_FromLongLong(convert(Clonglong, o)))
 end
 
 function py_cast(::Type{Py}, o::String)
     return Py(PyAPI.PyUnicode_FromString(o))
+end
+
+function py_cast(::Type{Py}, o::Py)
+    return o
 end
 
 function py_builtin_get()

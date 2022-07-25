@@ -1,4 +1,3 @@
-using MLStyle: @match
 export get_numpy
 
 const Py_intptr_t = Cssize_t  # TODO: verify for portability
@@ -41,6 +40,7 @@ function get_numpy()
         PyAPI.Py_IncRef(x)
         unsafe_set!(G_numpy, unsafe_unwrap(x))
     end
+    
     return G_numpy
 end
 
@@ -53,7 +53,11 @@ function register_root(x::Py, jo::Array)
     ptr = unsafe_unwrap(x)
     PyAPI.Py_IncRef(ptr)
     finalizer(jo) do _
-        PyAPI.Py_DecRef(ptr)
+        if G_IsInitialized[] && PyAPI.Py_IsInitialized() != 0
+            WITH_GIL(GILNoRaise()) do
+                PyAPI.Py_DecRef(ptr)
+            end
+        end
     end
     jo
 end
