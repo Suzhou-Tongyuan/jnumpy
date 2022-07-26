@@ -1,9 +1,12 @@
+# project specific ignore
+/test*.jl
+/test*.py
+bench0714.jl
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
-/test*.jl
-/test*.py
 
 # C extensions
 *.so
