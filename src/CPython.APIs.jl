@@ -1,9 +1,15 @@
 import Libdl
 
 struct UnsafeNew end
+struct NewReference end
+struct BorrowReference end
 
 mutable struct Py
     ptr :: C.Ptr{PyObject}
+    
+    function Py(::BorrowReference, ptr::C.Ptr{PyObject})
+        return new(ptr)
+    end
     function Py(::UnsafeNew, ptr::C.Ptr{PyObject}=Py_NULLPTR)
         self = new(ptr)
         finalizer(self) do x
@@ -19,6 +25,11 @@ end
 
 Py(ptr::C.Ptr{PyObject}) = Py(UnsafeNew(), ptr)
 const G_PyBuiltin = Py(UnsafeNew())
+
+function Py(::NewReference, ptr::C.Ptr{PyObject})
+    PyAPI.Py_IncRef(ptr)
+    return Py(UnsafeNew(), ptr)
+end
 
 unsafe_unwrap(x::Py) = getfield(x, :ptr)
 unsafe_unwrap(x::C.Ptr{PyObject}) = x
@@ -67,6 +78,7 @@ mutable struct PythonAPIStruct
     PyObject_IsInstance::cfunc_t(C.Ptr{PyObject}, C.Ptr{PyObject}, Except(-1, Cint)) # except -1
     PyUnicode_FromString::cfunc_t(Cstring, Except(Py_NULLPTR, C.Ptr{PyObject})) # except NULL
     PyUnicode_AsUTF8AndSize::cfunc_t(C.Ptr{PyObject}, Ptr{Py_ssize_t}, Except(C_NULL, Ptr{Cchar}))
+    PyUnicode_FromStringAndSize::cfunc_t(Cstring, Py_ssize_t, Except(Py_NULLPTR, C.Ptr{PyObject})) # except NULL
     PyErr_Print::cfunc_t(Cvoid) # no except
     PyErr_Occurred::cfunc_t(C.Ptr{PyObject}) # not set -> NULL
     PyErr_SetString::cfunc_t(C.Ptr{PyObject}, Cstring, Cvoid) # no except
@@ -149,7 +161,7 @@ end
 ```
 """
 @inline function WITH_GIL(f, ::GILNoRaise)
-    if is_calling_julia_from_python() && G_IsInitialized[] && PyAPI.Py_IsInitialized() != 0
+    if is_calling_julia_from_python() && G_IsInitialized[]
         g = PyAPI.PyGILState_Ensure()
         r = f()
         PyAPI.PyGILState_Release(g)
@@ -159,7 +171,7 @@ end
 end
 
 @inline function WITH_GIL(f)
-    if is_calling_julia_from_python() && G_IsInitialized[] && PyAPI.Py_IsInitialized() != 0
+    if is_calling_julia_from_python() && G_IsInitialized[]
         g = PyAPI.PyGILState_Ensure()
         try
             return f()
@@ -233,10 +245,9 @@ function py_isnull(x::C.Ptr{PyObject})
     x === Py_NULLPTR
 end
 
-
-function py_throw()
-    if !(G_IsInitialized[] && PyAPI.Py_IsInitialized() != 0)
-        msg = capure_out() do
+@noinline function py_throw()
+    if !(G_IsInitialized[])
+        msg = capture_out() do
             PyAPI.PyErr_Print()
             PyAPI.PyErr_Clear()
         end
@@ -293,6 +304,10 @@ end
 
 function get_refcnt(o:: Union{Py, C.Ptr{PyObject}})::Py_ssize_t
     return unsafe_unwrap(o).refcnt[]
+end
+
+function py_import(name::AbstractString)
+    Py(PyAPI.PyImport_ImportModule(name))
 end
 
 # mutable struct PyConstantStore

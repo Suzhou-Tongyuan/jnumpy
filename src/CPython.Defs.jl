@@ -90,7 +90,7 @@ const PyCFunctionWithKeywords = Ptr{Cvoid} # (PyO*, PyO*, Py_ssize_t, PyO* kwnam
 const METH_VARARGS = Cint(0x0001)
 const METH_KEYWORDS = Cint(0x0002)
 const METH_NOARGS = Cint(0x0004)
-const METH_FASTCALL = Cint(0x00806)  # since 2016 / Python 3.6
+const METH_FASTCALL = Cint(0x0080)  # since 2016 / Python 3.6
 const Py_ssize_t = Cssize_t
 const Py_hash_t = Cssize_t
 

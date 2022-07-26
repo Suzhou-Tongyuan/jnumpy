@@ -53,7 +53,7 @@ function register_root(x::Py, jo::Array)
     ptr = unsafe_unwrap(x)
     PyAPI.Py_IncRef(ptr)
     finalizer(jo) do _
-        if G_IsInitialized[] && PyAPI.Py_IsInitialized() != 0
+        if G_IsInitialized[]
             WITH_GIL(GILNoRaise()) do
                 PyAPI.Py_DecRef(ptr)
             end

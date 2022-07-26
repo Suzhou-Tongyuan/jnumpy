@@ -1,1 +1,2 @@
-from .init import init_jl, eval_jl
+from .init import init_jl, exec_julia, include_src
+from numpy import *

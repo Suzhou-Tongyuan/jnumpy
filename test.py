@@ -1,22 +1,22 @@
 import os
-os.environ['RAWPY_JL_OPTS'] = "--compile=min -O0 --project"
-from jnumpy import init_jl, eval_jl
+os.environ['RAWPY_JL_OPTS'] = "--project" # + "--compile=min -O0"
+from jnumpy import init_jl, exec_julia, include_src
+import jnumpy as np
 init_jl()
-eval_jl(r'''
-try
-    using RawPython.CPython
-    CPython.WITH_GIL() do
-        include("test.jl")
-    end    
-catch e
-    Base.showerror(stderr, e, catch_backtrace())
-end
-''')
+include_src('PyC_MyCMod.jl')
 
-import MyCExtensionInJulia # type: ignore
+import MyCMod # type: ignore
 import numpy as np
+import time
+import scipy.fft as scipy_fft
+xs = np.random.random(50000).astype(np.complex128)
+MyCMod.fft(xs)
+print("scipy fft")
+%timeit scipy_fft.fft(xs)
+print("jnumpy(tongyuan) fft")
+%timeit MyCMod.fft(xs)
 
-print(
-    MyCExtensionInJulia.scalar_func(1, 2))
-print(MyCExtensionInJulia.array_func(np.random.random(30), np.random.random(20)))
+xs = np.random.random(50000).astype(np.complex128)
+print("总元素:", len(xs), "结果相同:", sum(np.isclose(MyCMod.fft(xs), scipy_fft.fft(xs))))
+
 

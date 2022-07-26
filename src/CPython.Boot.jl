@@ -48,7 +48,7 @@ function init(ptr :: Ptr{Cvoid})
     init_api!(ptr)
     G_IsInitialized[] = true
     atexit() do
-        if G_IsInitialized[] && PyAPI.Py_IsInitialized() != 0
+        if G_IsInitialized[]
             WITH_GIL() do
                 G_IsInitialized[] = false
                 PyAPI.Py_FinalizeEx()

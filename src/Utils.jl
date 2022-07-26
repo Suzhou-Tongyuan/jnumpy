@@ -1,6 +1,6 @@
 module Utils
 import IOCapture
-function capure_out(f)
+function capture_out(f)
     capture = IOCapture.capture() do
         f()
     end

@@ -1,7 +1,7 @@
 module CPython
 using MLStyle: @match, @switch
 import RawPython.C
-import RawPython.Utils: capure_out, unroll_do!
+import RawPython.Utils: capture_out, unroll_do!
 export py_builtin_get, py_throw, WITH_GIL, GILNoRaise
 export py_cast, py_coerce
 export Py

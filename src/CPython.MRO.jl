@@ -234,11 +234,15 @@ function py_cast(::Type{Py}, o::Integer)
 end
 
 function py_cast(::Type{Py}, o::String)
-    return Py(PyAPI.PyUnicode_FromString(o))
+    return Py(PyAPI.PyUnicode_FromStringAndSize(o, ncodeunits(o)))
 end
 
 function py_cast(::Type{Py}, o::Py)
     return o
+end
+
+function py_cast(::Type{Py}, o::T) where T <: StridedArray
+    py_coerce(Py, o)
 end
 
 function py_builtin_get()

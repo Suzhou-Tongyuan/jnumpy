@@ -1,6 +1,6 @@
+authors = ["thautwarm <twshere@outlook.com>"]
 name = "RawPython"
 uuid = "9c4566a2-237d-4c69-9a5e-9d27b7d0881b"
-authors = ["thautwarm <twshere@outlook.com>"]
 version = "0.1.0"
 
 [deps]
@@ -10,3 +10,6 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MLStyle = "d8e11817-5142-5d16-987a-aa16d5891078"
 MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
+
+[extras]
+FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"

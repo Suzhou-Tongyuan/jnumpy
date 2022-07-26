@@ -8,7 +8,7 @@ export @export_py, @export_pymodule, Pyfunc
 
 const refl = Reflection
 
-const METH_CFUNC = METH_VARARGS | METH_KEYWORDS
+const METH_CFUNC = METH_FASTCALL # METH_VARARGS | METH_KEYWORDS
 
 """
 Return a new PyObject from a Julia function, if the latter has been marked using `@export_py`.
@@ -25,6 +25,10 @@ end
 function _errormsg_argmismatch(args::Py, nargs::Integer)
     ngot = length(args)
     return "expected $nargs arguments, got $ngot."
+end
+
+function _errormsg_argmismatch(argc::Integer, nargs::Integer)
+    return "expected $nargs arguments, got $argc."
 end
 
 const PyPtr = Ptr{PyObject}
@@ -55,69 +59,100 @@ function export_py(__module__::Module, __source__::LineNumberNode, fi::FuncInfo)
     end
 
     nargs = length(fi.pars)
-    argtypes = Expr(:curly, Tuple, parTypes...)
 
     pyfname = Symbol(string(fi.name), "##", "_pyfunc")
     pyfname_string_name = Symbol(string(fi.name), "##", "_name")
     pyfname_noinline = Symbol(string(fi.name), "##", "_pyfunc_noinline")
+    pyfname_except = Symbol(string(fi.name), "##", "_pyfunc_except")
     pyfptrname = Symbol(string(fi.name), "##", "_pyfuncptr")
     pymethname = Symbol(string(fi.name), "##", "_pymethod_o")
     pyfuncobjectname = Symbol(string(fi.name), "##", "_pyo")
     pyfuncobjectname_ = Symbol(string(fi.name), "##", "_pyo_ptr")
+    pydocname = Symbol(string(fi.name), "##", "_pydoc")
 
     orig = to_expr(fi)
     quote
-        $orig
+        $Base.@__doc__ $orig
 
-        Base.@noinline function $pyfname_noinline(::$(Ptr{PyObject}), _py_args::$(Ptr{PyObject}), _py_kwargs::$(Ptr{PyObject}))::$(Ptr{PyObject})
+        Base.@noinline function $pyfname_noinline(self::$(Ptr{PyObject}), _vectorargs::$(Ptr{C.Ptr{PyObject}}), argc::$Py_ssize_t)::$(Ptr{PyObject})
             $__source__
             $__source__
-            _py_args = $C.Ptr(_py_args)
-            $PyAPI.Py_IncRef(_py_args)
-            py_args = Py(_py_args)
-            if length(py_args) != $nargs
-                _err_msg = _errormsg_argmismatch(py_args, $nargs)
-                println(_err_msg)
-                flush(stdout)
-                $PyAPI.PyErr_SetString($PyAPI.PyExc_ValueError[], _errormsg_argmismatch(py_args, $nargs))
+            if argc != $nargs
+                $PyAPI.PyErr_SetString($PyAPI.PyExc_ValueError[], _errormsg_argmismatch(argc, $nargs))
                 return $Py_NULLPTR
             end
-            __o = py_cast($Py, $(fi.name)($py_coerce($argtypes, py_args)...))
+            $([:(local $(Symbol("arg", i)) = $Py($BorrowReference(), $unsafe_load(_vectorargs, $i))) for i = 1:nargs]...)
+            __o = py_cast($Py, $(fi.name)($([:($py_coerce($(parTypes[i]), $(Symbol("arg", i)))) for i = 1:nargs]...)))
             $PyAPI.Py_IncRef(__o)
             return $unsafe_unwrap(__o)
         end
-        function $pyfname(self::$(Ptr{PyObject}), _py_args::$(Ptr{PyObject}), _py_kwargs::$(Ptr{PyObject}))::$(Ptr{PyObject})
+
+        # Base.@noinline function $pyfname_noinline(::$(Ptr{PyObject}), _py_args::$(Ptr{PyObject}), _py_kwargs::$(Ptr{PyObject}))::$(Ptr{PyObject})
+        #     $__source__
+        #     $__source__
+        #     _py_args = $C.Ptr(_py_args)
+        #     $PyAPI.Py_IncRef(_py_args)
+        #     py_args = Py(_py_args)
+        #     if length(py_args) != $nargs
+        #         $PyAPI.PyErr_SetString($PyAPI.PyExc_ValueError[], _errormsg_argmismatch(py_args, $nargs))
+        #         return $Py_NULLPTR
+        #     end
+        #     __o = py_cast($Py, $(fi.name)($py_coerce($argtypes, py_args)...))
+        #     $PyAPI.Py_IncRef(__o)
+        #     return $unsafe_unwrap(__o)
+        # end
+
+        Base.@noinline function $pyfname_except(e::Exception)
+            if e isa $PyException
+                $PyAPI.PyErr_SetObject(e.type, e.value)
+            else
+                msg = $Utils.capture_out() do
+                    $Base.showerror(stderr, e, $catch_backtrace())
+                end
+                $PyAPI.PyErr_SetString($PyAPI.PyErr_SetObject, $CPython.G_PyBuiltin.Exception($py_cast($Py, msg)))
+            end
+            return $Py_NULLPTR
+        end
+
+        function $pyfname(self::$(Ptr{PyObject}), _vectorargs::$(Ptr{C.Ptr{PyObject}}), argc::$Py_ssize_t)::$(Ptr{PyObject})
             $__source__
             $__source__
             try
-                return $pyfname_noinline(self, _py_args, _py_kwargs)
+                return $pyfname_noinline(self, _vectorargs, argc)
             catch e
-                if e isa $PyException
-                    $PyAPI.PyErr_SetObject(e.type, e.value)
-                else
-                    msg = $Utils.capure_out() do
-                        $Base.showerror(stderr, e, catch_backtrace())
-                    end
-                    $PyAPI.PyErr_SetString($PyAPI.PyErr_SetObject, $CPython.G_PyBuiltin.Exception($py_cast($Py, msg)))
-                end
-                return $Py_NULLPTR
+                println(e)
+                return $pyfname_except(e)
             end
         end
-        const $pyfptrname = $Base.@cfunction($(Expr(:$, pyfname)), $PyPtr, ($PyPtr, $PyPtr, $PyPtr))
+
+        # function $pyfname(self::$(Ptr{PyObject}), _py_args::$(Ptr{PyObject}), _py_kwargs::$(Ptr{PyObject}))::$(Ptr{PyObject})
+        #     $__source__
+        #     $__source__
+        #     try
+        #         return $pyfname_noinline(self, _py_args, _py_kwargs)
+        #     catch e
+        #         return $pyfname_except(e)
+        #     end
+        # end
+
+        # const $pyfptrname = $Base.@cfunction($(Expr(:$, pyfname)), $PyPtr, ($PyPtr, $PyPtr, $PyPtr))
+        const $pyfptrname = $Base.@cfunction($(Expr(:$, pyfname)), $PyPtr, ($PyPtr, $(Ptr{C.Ptr{PyObject}}), $Py_ssize_t))
         const $pyfname_string_name = $(string(fi.name))
         const $pymethname = $Ref{$PyMethodDef}()
 
 
-        const $pyfuncobjectname = Ref{Py}()
-        const $pyfuncobjectname_ = Ref{Ptr{Cvoid}}(C_NULL)
+        const $pyfuncobjectname = $(Ref{Py})()
+        const $pyfuncobjectname_ = $(Ref{Ptr{Cvoid}})($C_NULL)
+        const $pydocname = Ref{String}()
 
         function RawPython.CPython.Pyfunc(::typeof($(fi.name)))
             if $pyfuncobjectname_[] == $C_NULL
+                $pydocname[] = repr($Base.Docs.doc($(fi.name)))
                 $pymethname[] = $PyMethodDef(
                     $pointer($pyfname_string_name),
                     $pyfptrname.ptr,
-                    $METH_CFUNC,
-                    $C_NULL
+                    $METH_FASTCALL,
+                    $Base.unsafe_convert($Cstring, $pydocname[])
                 )
                 $pyfuncobjectname[] = $Py($PyAPI.PyCFunction_NewEx($Base.unsafe_convert($(Ptr{Cvoid}), $pymethname), $C_NULL, $C_NULL))
                 $pyfuncobjectname_[] = $reinterpret($(Ptr{Cvoid}), $unsafe_unwrap($pyfuncobjectname[]))
