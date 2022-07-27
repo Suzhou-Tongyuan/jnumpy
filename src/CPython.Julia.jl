@@ -23,9 +23,14 @@ function py_getmodule_types()
     return G_pymodule_types[]
 end
 
+const PRE_CACHE_SIZE = 500
 function __init_julia_wrap__()
     empty!(G_arrayinfo)
     empty!(G_arrayinfo_unused_slots)
+    for i in 1:PRE_CACHE_SIZE
+        push!(G_arrayinfo, nothing)
+        push!(G_arrayinfo_unused_slots, i)
+    end
     G_pymodule_types[] = Py(Py_NULLPTR)
 end
 

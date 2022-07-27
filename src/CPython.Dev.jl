@@ -1,8 +1,8 @@
 #=
 implementing necessary utilities to create CPython extensions.
 =#
-using RawPython.Reflection
-import RawPython.Utils
+using TyPython.Reflection
+import TyPython.Utils
 import MacroTools: @q
 export @export_py, @export_pymodule, Pyfunc
 
@@ -78,7 +78,7 @@ function export_py(__module__::Module, __source__::LineNumberNode, fi::FuncInfo)
             $__source__
             $__source__
             if argc != $nargs
-                $PyAPI.PyErr_SetString($PyAPI.PyExc_ValueError[], _errormsg_argmismatch(argc, $nargs))
+                $PyAPI.PyErr_SetString($PyAPI.PyExc_ValueError[], $_errormsg_argmismatch(argc, $nargs))
                 return $Py_NULLPTR
             end
             $([:(local $(Symbol("arg", i)) = $Py($BorrowReference(), $unsafe_load(_vectorargs, $i))) for i = 1:nargs]...)
@@ -94,7 +94,7 @@ function export_py(__module__::Module, __source__::LineNumberNode, fi::FuncInfo)
         #     $PyAPI.Py_IncRef(_py_args)
         #     py_args = Py(_py_args)
         #     if length(py_args) != $nargs
-        #         $PyAPI.PyErr_SetString($PyAPI.PyExc_ValueError[], _errormsg_argmismatch(py_args, $nargs))
+        #         $PyAPI.PyErr_SetString($PyAPI.PyExc_ValueError[], $_errormsg_argmismatch(py_args, $nargs))
         #         return $Py_NULLPTR
         #     end
         #     __o = py_cast($Py, $(fi.name)($py_coerce($argtypes, py_args)...))
@@ -145,7 +145,7 @@ function export_py(__module__::Module, __source__::LineNumberNode, fi::FuncInfo)
         const $pyfuncobjectname_ = $(Ref{Ptr{Cvoid}})($C_NULL)
         const $pydocname = Ref{String}()
 
-        function RawPython.CPython.Pyfunc(::typeof($(fi.name)))
+        function TyPython.CPython.Pyfunc(::typeof($(fi.name)))
             if $pyfuncobjectname_[] == $C_NULL
                 $pydocname[] = repr($Base.Docs.doc($(fi.name)))
                 $pymethname[] = $PyMethodDef(

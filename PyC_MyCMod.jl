@@ -1,10 +1,11 @@
 module PyC_MyCMod
-using RawPython
-using RawPython.CPython
+using TyPython
+using TyPython.CPython
 using MKL
+using Primes
 import FFTW
 FFTW.set_num_threads(4)
-RawPython.CPython.init()
+TyPython.CPython.init()
 
 @export_py function f(x::Int, y::Int)::Int
     x + y
@@ -35,10 +36,18 @@ const plan1Ds = Dict{Tuple{DataType, NTuple{N, Int} where N}, FFT1D_PlanType}()
     return plan * x
 end
 
+@export_py function jl_array_cache_pool()::Tuple{Int, Int}
+    (length(CPython.G_arrayinfo), length(CPython.G_arrayinfo_unused_slots))
+end
+
+precompile(jfft, (Vector{Float64}, ))
+precompile(jfft, (Vector{ComplexF64}, ))
+
 @export_pymodule MyCMod begin
     array_func = Pyfunc(array_func)
     scalar_func = Pyfunc(f)
     fft = Pyfunc(jfft)
+    jl_array_cache_pool = Pyfunc(jl_array_cache_pool)
     value = 1 # auto convert to py
 end
 

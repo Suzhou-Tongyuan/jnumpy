@@ -26,7 +26,7 @@ println(dirname(Pkg.project().path))
 
 exec_template = r"""
 try
-    import RawPython.CPython
+    import TyPython.CPython
     Base.@eval CPython.WITH_GIL() do
         {}
     end
@@ -114,8 +114,8 @@ def init_jl():
         try
             import Pkg
             Pkg.activate({escape_string(project_dir)}, io=devnull)
-            import RawPython
-            RawPython.CPython.init()
+            import TyPython
+            TyPython.CPython.init()
         catch err
             showerror(stderr, err, catch_backtrace())
             rethrow()

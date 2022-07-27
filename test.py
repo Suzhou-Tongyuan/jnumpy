@@ -7,12 +7,14 @@ include_src('PyC_MyCMod.jl')
 
 import MyCMod # type: ignore
 import numpy as np
-import time
 import scipy.fft as scipy_fft
-xs = np.random.random(50000).astype(np.complex128)
+xs = np.random.random(50000)  # .astype(np.complex128)
+import gc
+
 MyCMod.fft(xs)
 print("scipy fft")
 %timeit scipy_fft.fft(xs)
+gc.collect()
 print("jnumpy(tongyuan) fft")
 %timeit MyCMod.fft(xs)
 

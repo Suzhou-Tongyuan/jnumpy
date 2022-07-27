@@ -186,7 +186,7 @@ end
 
 @generated function py_coerce(::Type{T}, py::Py)::T where T <: Tuple
     T isa DataType && :(error("$T is not a data type"))
-    result = Expr(:tuple, [:($py_coerce($t, unsafe_pytuple_get(py, $(i - 1)))) for (i, t) in enumerate(T.parameters)]...)
+    result = Expr(:tuple, [:($py_coerce($t, $unsafe_pytuple_get(py, $(i - 1)))) for (i, t) in enumerate(T.parameters)]...)
     quote
         if $PyAPI.PyObject_IsInstance(py,  $PyAPI.PyTuple_Type) == 0
             $PyAPI.PyErr_SetString($PyAPI.PyExc_TypeError[], "expected a tuple")
