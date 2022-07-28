@@ -101,51 +101,51 @@ function from_ndarray(x::Py)
     shape = Tuple(Int(i) 
         for i in unsafe_wrap(Array, convert(Ptr{Py_intptr_t}, info.shape), Int(info.nd); own=false)) :: ShapeType
 
-    @match (Char(info.typekind), Int(info.itemsize)) begin
-        ('i', 1) =>
+    @switch (Char(info.typekind), Int(info.itemsize)) begin
+        @case ('i', 1)
             register_root(x,
                 unsafe_wrap(Array, convert(Ptr{Int8}, info.data), shape; own=false))
-        ('i', 2) =>
+        @case ('i', 2)
             register_root(x,
                 unsafe_wrap(Array, convert(Ptr{Int16}, info.data), shape; own=false))
-        ('i', 4) =>
+        @case ('i', 4)
             register_root(x,
                 unsafe_wrap(Array, convert(Ptr{Int32}, info.data), shape; own=false))
-        ('i', 8) =>
+        @case ('i', 8)
             register_root(x,
                 unsafe_wrap(Array, convert(Ptr{Int64}, info.data), shape; own=false))
-        ('f', 2) =>
+        @case ('f', 2)
             register_root(x,
                 unsafe_wrap(Array, convert(Ptr{Float16}, info.data), shape; own=false))
-        ('f', 4) =>
+        @case ('f', 4)
                 register_root(x,
                     unsafe_wrap(Array, convert(Ptr{Float32}, info.data), shape; own=false))
-        ('f', 8) =>
+        @case ('f', 8)
                 register_root(x,
                     unsafe_wrap(Array, convert(Ptr{Float64}, info.data), shape; own=false))
-        ('u', 1) =>
+        @case ('u', 1)
             register_root(x,
                 unsafe_wrap(Array, convert(Ptr{UInt8}, info.data), shape; own=false))
-        ('u', 2) =>
+        @case ('u', 2)
             register_root(x,
                 unsafe_wrap(Array, convert(Ptr{UInt16}, info.data), shape; own=false))
-        ('u', 4) =>
+        @case ('u', 4)
             register_root(x,
                 unsafe_wrap(Array, convert(Ptr{UInt32}, info.data), shape; own=false))
-        ('u', 8) =>
+        @case ('u', 8)
             register_root(x,
                 unsafe_wrap(Array, convert(Ptr{UInt64}, info.data), shape; own=false))
-        ('c', 4) => 
+        @case ('c', 4)
             register_root(x,
                 unsafe_wrap(Array, convert(Ptr{ComplexF16}, info.data), shape; own=false))
-        ('c', 8) => 
+        @case ('c', 8)
             register_root(x,
                 unsafe_wrap(Array, convert(Ptr{ComplexF32}, info.data), shape; own=false))
-        ('c', 16) => 
+        @case ('c', 16)
             register_root(x,
                 unsafe_wrap(Array, convert(Ptr{ComplexF64}, info.data), shape; own=false))
-        (code, nbytes) =>
-            error("unsupported numpy dtype: $(Char(code)) $(nbytes)")        
+        @case (code, nbytes)
+            error("unsupported numpy dtype: $(code) $(nbytes)")
     end
 end
 

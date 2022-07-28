@@ -36,7 +36,7 @@ end
     return Py(PyAPI.PyObject_GetItem(self, py_tuple_create(ind, inds...)))
 end
 
-@noinline function Base.setindex!(self::Py, value::Py, ind, inds::Py...)::Py
+@noinline function Base.setindex!(self::Py, value::Py, ind::Py, inds::Py...)::Py
     if isempty(inds)
         PyAPI.PyObject_SetItem(self, ind, value)
     else
@@ -169,6 +169,12 @@ function py_coerce(::Type{T}, py::Py)::T where T <: Complex
     convert(T, complex(d.real, d.imag))
 end
 
+function py_coerce(::Type{T}, py::Py)::T where T <: AbstractString
+    size_ref = Ref(0)
+    buf = PyAPI.PyUnicode_AsUTF8AndSize(py , size_ref)
+    return convert(T, Base.unsafe_string(buf, size_ref[]))
+end
+
 function py_coerce(::Type{TArray}, py::Py)::TArray where {TArray <: StridedArray}
     np = get_numpy()
     if PyAPI.PyObject_IsInstance(py, np.ndarray) == 0
@@ -206,10 +212,8 @@ function py_cast(::Type{Bool}, o::Py)
     return PyAPI.PyObject_IsTrue(o) != 0
 end
 
-function py_cast(::Type{String}, o::Py)
-    size_ref = Ref(0)
-    buf = PyAPI.PyUnicode_AsUTF8AndSize(o , size_ref)
-    return Base.unsafe_string(buf, size_ref[])
+function py_cast(::Type{T}, o::Py) where T <: AbstractString
+    py_coerce(T, o)
 end
 
 function py_cast(::Type{Py}, o::Tuple)

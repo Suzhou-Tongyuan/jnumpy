@@ -47,6 +47,10 @@ function export_py(__module__::Module, __source__::LineNumberNode, fi::FuncInfo)
         if par.name isa refl.Undefined || par.type isa refl.Undefined
             error("Python C API function must have name and type for all parameters")
         end
+        if par.defaultVal isa refl.Undefined
+        else
+            error("Python C API function cannot have default parameters")
+        end
         push!(parTypes, par.type)
     end
 
@@ -87,21 +91,6 @@ function export_py(__module__::Module, __source__::LineNumberNode, fi::FuncInfo)
             return $unsafe_unwrap(__o)
         end
 
-        # Base.@noinline function $pyfname_noinline(::$(Ptr{PyObject}), _py_args::$(Ptr{PyObject}), _py_kwargs::$(Ptr{PyObject}))::$(Ptr{PyObject})
-        #     $__source__
-        #     $__source__
-        #     _py_args = $C.Ptr(_py_args)
-        #     $PyAPI.Py_IncRef(_py_args)
-        #     py_args = Py(_py_args)
-        #     if length(py_args) != $nargs
-        #         $PyAPI.PyErr_SetString($PyAPI.PyExc_ValueError[], $_errormsg_argmismatch(py_args, $nargs))
-        #         return $Py_NULLPTR
-        #     end
-        #     __o = py_cast($Py, $(fi.name)($py_coerce($argtypes, py_args)...))
-        #     $PyAPI.Py_IncRef(__o)
-        #     return $unsafe_unwrap(__o)
-        # end
-
         Base.@noinline function $pyfname_except(e::Exception)
             if e isa $PyException
                 $PyAPI.PyErr_SetObject(e.type, e.value)
@@ -109,7 +98,7 @@ function export_py(__module__::Module, __source__::LineNumberNode, fi::FuncInfo)
                 msg = $Utils.capture_out() do
                     $Base.showerror(stderr, e, $catch_backtrace())
                 end
-                $PyAPI.PyErr_SetString($PyAPI.PyErr_SetObject, $CPython.G_PyBuiltin.Exception($py_cast($Py, msg)))
+                $PyAPI.PyErr_SetObject($CPython.G_PyBuiltin.RuntimeError, $py_cast($Py, msg))
             end
             return $Py_NULLPTR
         end
@@ -120,22 +109,10 @@ function export_py(__module__::Module, __source__::LineNumberNode, fi::FuncInfo)
             try
                 return $pyfname_noinline(self, _vectorargs, argc)
             catch e
-                println(e)
                 return $pyfname_except(e)
             end
         end
 
-        # function $pyfname(self::$(Ptr{PyObject}), _py_args::$(Ptr{PyObject}), _py_kwargs::$(Ptr{PyObject}))::$(Ptr{PyObject})
-        #     $__source__
-        #     $__source__
-        #     try
-        #         return $pyfname_noinline(self, _py_args, _py_kwargs)
-        #     catch e
-        #         return $pyfname_except(e)
-        #     end
-        # end
-
-        # const $pyfptrname = $Base.@cfunction($(Expr(:$, pyfname)), $PyPtr, ($PyPtr, $PyPtr, $PyPtr))
         const $pyfptrname = $Base.@cfunction($(Expr(:$, pyfname)), $PyPtr, ($PyPtr, $(Ptr{C.Ptr{PyObject}}), $Py_ssize_t))
         const $pyfname_string_name = $(string(fi.name))
         const $pymethname = $Ref{$PyMethodDef}()
