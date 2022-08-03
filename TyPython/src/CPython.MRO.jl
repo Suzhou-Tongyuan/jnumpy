@@ -234,7 +234,7 @@ function py_cast(::Type{Py}, o::AbstractFloat)
 end
 
 function py_cast(::Type{Py}, o::Complex)
-    return Py(PyAPI.PyComplex_FromCComplex(Base.convert(Py_complex, o)))
+    return Py(PyAPI.PyComplex_FromCComplex(convert(Py_complex, o)))
 end
 
 function py_cast(::Type{Py}, o::Integer)
@@ -243,6 +243,10 @@ end
 
 function py_cast(::Type{Py}, o::String)
     return Py(PyAPI.PyUnicode_FromStringAndSize(o, ncodeunits(o)))
+end
+
+function py_cast(::Type{Py}, o::Nothing)
+    return PyAPI.Py_None
 end
 
 function py_cast(::Type{Py}, o::Py)
