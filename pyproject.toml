@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "jnumpy"
+version = "0.1.0"
+description = "Writing Python C extensions in Julia within 5 minutes."
+authors = ["thautwarm"]
+include = ["TyPython"]
+
+[tool.poetry.dependencies]
+python = "^3.7"
+numpy = "^1.18"
+jill = "^0.11.1"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
