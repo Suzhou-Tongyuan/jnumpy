@@ -53,9 +53,7 @@ mutable struct PythonAPIStruct
     Py_IncRef::cfunc_t(C.Ptr{PyObject}, Cvoid) # no except
     PyGILState_Ensure::cfunc_t(PyGILState) # no except
     PyGILState_Release::cfunc_t(PyGILState, Cvoid) # no except
-    # Py_IsNone::cfunc_t(C.Ptr{PyObject}, Cint) # no except
-    # Py_IsFalse::cfunc_t(C.Ptr{PyObject}, Cint) # no except
-    # Py_IsTrue::cfunc_t(C.Ptr{PyObject}, Cint) # no except
+
     PyObject_Not::cfunc_t(C.Ptr{PyObject}, Except(-1, Cint)) # except -1
     PyObject_IsTrue::cfunc_t(C.Ptr{PyObject}, Except(-1, Cint)) # except -1
     PyObject_Call::cfunc_t(C.Ptr{PyObject}, C.Ptr{PyObject}, C.Ptr{PyObject}, Except(Py_NULLPTR, C.Ptr{PyObject}))
@@ -113,7 +111,8 @@ mutable struct PythonAPIStruct
     PyFloat_AsDouble::cfunc_t(C.Ptr{PyObject}, Cdouble) # except -1.0 ana error occurred
     PyFloat_FromDouble::cfunc_t(Cdouble, Except(Py_NULLPTR, C.Ptr{PyObject}))
     PyComplex_AsCComplex::cfunc_t(C.Ptr{PyObject}, Py_complex) # except .real is -1.0 ana error occurred
-    
+    PyComplex_FromCComplex::cfunc_t(Py_complex, C.Ptr{PyObject})
+
     PyEval_EvalCode::cfunc_t(C.Ptr{PyObject}, C.Ptr{PyObject}, C.Ptr{PyObject}, Except(Py_NULLPTR, C.Ptr{PyObject}))
     Py_CompileString::cfunc_t(Cstring, Cstring, Cint, Except(Py_NULLPTR, C.Ptr{PyObject}))
     
