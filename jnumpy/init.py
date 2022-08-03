@@ -62,11 +62,21 @@ def exec_julia(x):
     _eval_jl(x)  # type: ignore
 
 def include_src(file_path: str, src_file: str):
+    """
+    include julia module in src_file
+
+    Arguments:
+      file_path:
+        should be `__file__`
+      src_file:
+        the releative path of julia file
+    """
     # activate project before include module
     global project_dir
-    src_dir = os.path.dirname(file_path)
-    src_path = os.path.join(src_dir, src_file)
-    activate_proj(src_dir)
+    file_dir = os.path.dirname(file_path)
+    src_path = os.path.join(file_dir, src_file)
+    src_path = os.path.abspath(src_path)
+    activate_proj(file_dir)
     exec_julia("include({})".format(escape_string(src_path)))
     activate_proj(project_dir)
 
