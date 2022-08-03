@@ -191,6 +191,12 @@ struct Py_complex
     imag::Cdouble
 end
 
+function Base.convert(::Type{Py_complex}, o::Complex)
+    real = convert(Cdouble, o.re)
+    imag = convert(Cdouble, o.im)
+    return Py_complex(real, imag)
+end
+
 const SIZE_PyGILState = sizeof(Cint) * 8
 primitive type PyGILState SIZE_PyGILState end
 

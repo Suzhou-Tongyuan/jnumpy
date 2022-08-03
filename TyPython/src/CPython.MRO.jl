@@ -233,6 +233,10 @@ function py_cast(::Type{Py}, o::AbstractFloat)
     return Py(PyAPI.PyFloat_FromDouble(convert(Cdouble, o)))
 end
 
+function py_cast(::Type{Py}, o::Complex)
+    return Py(PyAPI.PyComplex_FromCComplex(Base.convert(Py_complex, o)))
+end
+
 function py_cast(::Type{Py}, o::Integer)
     Py(PyAPI.PyLong_FromLongLong(convert(Clonglong, o)))
 end
