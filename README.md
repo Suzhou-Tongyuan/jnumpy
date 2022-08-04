@@ -56,6 +56,6 @@ jl_mat_mul(x, y)
 
 `JNUMPY_HOME`: The home dir of jnumpy. The default value is `~/.jnumpy`. jnumpy run julia in a default environment `$JNUMPY_HOME/envs/default`. If you don't have a julia, jnumpy could install julia in `$JNUMPY_HOME` by [JILL](https://github.com/johnnychen94/jill.py)
 `RAWPY_JL_EXE`: The julia Executable Path. 
-`RAWPY_JL_OPTS`: Command-line options when launching julia. If you want to use a custom environment, you could set `--project=<dir>`
+`RAWPY_JL_OPTS`: Command-line options when launching julia. If you want to use a custom environment, you could set `--project=<dir>`.
 
 
