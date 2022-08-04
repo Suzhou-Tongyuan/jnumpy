@@ -35,7 +35,7 @@ jobs:
 
       # Runs a single command using the runners shell
       - name: pip insatll
-        run: python -m pip install numpy jill pytest poetry
+        run: python -m pip install numpy jill pytest
         
       - name: Setup Julia environment
         uses: julia-actions/setup-julia@v1.8.1
