@@ -6,7 +6,7 @@
 
 ### Install JNumpy
 
-`pip install jnumpy`
+`pip install julianumpy`
 
 ### Quick Start
 

@@ -1,9 +1,10 @@
 [tool.poetry]
-name = "jnumpy"
+name = "julianumpy"
 version = "0.1.0"
 description = "Writing Python C extensions in Julia within 5 minutes."
 authors = ["thautwarm <twshere@outlook.com>"]
 maintainers = ["songjhaha <songjh96@foxmail.com>"]
+packages = [{include = "jnumpy"}]
 include = ["TyPython"]
 
 [tool.poetry.dependencies]
