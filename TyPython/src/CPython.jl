@@ -2,7 +2,7 @@ module CPython
 using MLStyle: @match, @switch
 import TyPython.C
 import TyPython.Utils: capture_out, unroll_do!
-export py_builtin_get, py_throw, WITH_GIL, GILNoRaise
+export get_py_builtin, py_throw, WITH_GIL, GILNoRaise
 export py_cast, py_coerce
 export Py
 

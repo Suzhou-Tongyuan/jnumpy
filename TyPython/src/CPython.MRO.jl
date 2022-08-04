@@ -233,12 +233,20 @@ function py_cast(::Type{Py}, o::AbstractFloat)
     return Py(PyAPI.PyFloat_FromDouble(convert(Cdouble, o)))
 end
 
+function py_cast(::Type{Py}, o::Complex)
+    return Py(PyAPI.PyComplex_FromCComplex(convert(Py_complex, o)))
+end
+
 function py_cast(::Type{Py}, o::Integer)
     Py(PyAPI.PyLong_FromLongLong(convert(Clonglong, o)))
 end
 
 function py_cast(::Type{Py}, o::String)
     return Py(PyAPI.PyUnicode_FromStringAndSize(o, ncodeunits(o)))
+end
+
+function py_cast(::Type{Py}, o::Nothing)
+    return PyAPI.Py_None
 end
 
 function py_cast(::Type{Py}, o::Py)
@@ -249,6 +257,6 @@ function py_cast(::Type{Py}, o::T) where T <: StridedArray
     py_coerce(Py, o)
 end
 
-function py_builtin_get()
+function get_py_builtin()
     return G_PyBuiltin
 end
