@@ -60,3 +60,5 @@ jobs:
           project: ./TyPython
       
       - uses: julia-actions/julia-processcoverage@v1
+        with:
+          directories: ./TyPython/src
