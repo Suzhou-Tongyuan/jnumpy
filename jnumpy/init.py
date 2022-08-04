@@ -61,15 +61,15 @@ def exec_julia(x):
     global _eval_jl
     _eval_jl(x)  # type: ignore
 
-def include_src(file_path: str, src_file: str):
+def include_src(src_file: str, file_path: str=""):
     """
     include julia module in src_file
 
     Arguments:
-      file_path:
-        should be `__file__`
       src_file:
-        the releative path of julia file
+        the path of julia file releative to file path.
+      file_path(option):
+        should be `__file__`, empty in repl mode.
     """
     # activate project before include module
     global project_dir
