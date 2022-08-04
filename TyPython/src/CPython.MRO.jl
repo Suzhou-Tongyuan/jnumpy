@@ -257,6 +257,6 @@ function py_cast(::Type{Py}, o::T) where T <: StridedArray
     py_coerce(Py, o)
 end
 
-function py_builtin_get()
+function get_py_builtin()
     return G_PyBuiltin
 end
