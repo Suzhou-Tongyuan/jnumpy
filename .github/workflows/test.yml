@@ -43,7 +43,7 @@ jobs:
           version: 1.6
       
       - name: add TyPython
-        run: julia --project=./jnumpy/tests/extension -e "import Pkg;Pkg.develop(url=\"./TyPython\")
+        run: julia --project=./jnumpy/tests/extension -e "import Pkg;Pkg.develop(url=\"./TyPython\")"
       
       - name: run pytest
         run: python -m pytest ./jnumpy/tests/test.py
