@@ -24,7 +24,7 @@ def test_mat_mul():
     y = np.random.rand(2,2)
     actual = mat_mul(x, y)
     desired = x @ y
-    np.testing.assert_array_equal(actual, desired)
+    np.testing.assert_array_almost_equal(actual, desired)
 
 def test_set_zero():
     x = np.random.rand(2)
