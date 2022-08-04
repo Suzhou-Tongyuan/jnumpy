@@ -35,7 +35,13 @@ jobs:
 
       # Runs a single command using the runners shell
       - name: pip insatll
-        run: python -m pip install numpy jill pytest
+        run: python -m pip install numpy jill pytest find_libpython
+        
+      - name: find python dll
+        run: echo "{RAWPY_PY_DLL}={$(python -m find_libpython)}" >> $GITHUB_ENV
+        
+      - name: list env
+        run: env
         
       - name: Setup Julia environment
         uses: julia-actions/setup-julia@v1.8.1
