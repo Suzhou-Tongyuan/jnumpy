@@ -1,7 +1,6 @@
 import os
 import subprocess
 import shutil
-import sys
 from jill.utils.interactive_utils import query_yes_no
 from jill.install import install_julia
 

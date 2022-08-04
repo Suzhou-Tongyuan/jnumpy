@@ -2,7 +2,7 @@
 name = "jnumpy"
 version = "0.1.0"
 description = "Writing Python C extensions in Julia within 5 minutes."
-authors = ["thautwarm"]
+authors = ["thautwarm <twshere@outlook.com>", "songjhaha <songjh96@foxmail.com>"]
 include = ["TyPython"]
 
 [tool.poetry.dependencies]
