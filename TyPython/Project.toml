@@ -12,3 +12,9 @@ MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
