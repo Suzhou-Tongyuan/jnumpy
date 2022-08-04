@@ -55,9 +55,8 @@ jobs:
         run: python -m pytest ./jnumpy/tests/test_core.py
       
       - name: Run Julia package tests
-        uses: julia-actions/julia-runtest@v1.7.0
-        with:
-          project: ./TyPython
+        run: julia --project=./TyPython --compiled-modules=no -e "import Pkg;Pkg.test(;coverage=true)"
+
       
       - uses: julia-actions/julia-processcoverage@v1
         with:
