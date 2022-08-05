@@ -46,17 +46,30 @@ end
 end
 
 @testset "py_coerce" begin
-    @test py_coerce(Int, py_cast(Py, 1.1)) == 1
+    @test py_coerce(Int, py_cast(Py, 1)) == 1
+    x1 = py_coerce(Int32, py_cast(Py, 1))
+    @test x1 isa Int32
+    @test x1 == Int32(1)
     @test_throws CPython.PyException py_coerce(Int, py_cast(Py, "abc"))
+
     @test py_coerce(Float64, py_cast(Py, 1.1)) == 1.1
+    x2 = py_coerce(Float32, py_cast(Py, 1.1))
+    @test x2 isa Float32
+    @test x2 == Float32(1.1)
     @test_throws CPython.PyException py_coerce(Float64, py_cast(Py, "abc"))
+
     @test py_coerce(ComplexF64, py_cast(Py, 1+0.5im)) == 1+0.5im
+    x3 = py_coerce(ComplexF32, py_cast(Py, 1+0.5im))
+    @test x3 isa ComplexF32
+    @test x3 == ComplexF32(1+0.5im)
     @test_throws CPython.PyException py_coerce(ComplexF64, py_cast(Py, "abc"))
-    @test py_coerce(ComplexF64, py_cast(Py, 1+0.5im)) == 1+0.5im
-    @test_throws CPython.PyException py_coerce(ComplexF64, py_cast(Py, "abc"))
+
     @test py_coerce(String, py_cast(Py, "äbc")) == "äbc"
     @test py_coerce(Array, py_cast(Py, [1 2; 3 4])) == [1 2; 3 4]
     @test py_coerce(Array, py_cast(Py, [1 2; 3 4]).transpose()) == [1 3; 2 4]
+    x4 = py_coerce(Matrix{Int32}, py_cast(Py, [1.0 2.0; 3.0 4.0]))
+    @test x4 isa Matrix{Int32}
+    @test x4 == Int32[1 2; 3 4]
     @test_throws CPython.PyException py_coerce(Array, py_cast(Py, "abc"))
 end
 
