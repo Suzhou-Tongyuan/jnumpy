@@ -64,9 +64,12 @@ end
     @test x3 == ComplexF32(1+0.5im)
     @test_throws CPython.PyException py_coerce(ComplexF64, py_cast(Py, "abc"))
 
+    @test py_coerce(Tuple{Int, String}, py_cast(Py, (1, "a"))) == (1, "a")
+    @test_throws CPython.PyException py_coerce(Tuple{Int, String}, py_cast(Py, (1, 1)))
+
     @test py_coerce(String, py_cast(Py, "äbc")) == "äbc"
     @test py_coerce(Array, py_cast(Py, [1 2; 3 4])) == [1 2; 3 4]
-    @test py_coerce(Array, py_cast(Py, [1 2; 3 4]).transpose()) == [1 3; 2 4]
+    @test py_coerce(Array, py_cast(Py, transpose([1 2; 3 4]))) == [1 3; 2 4]
     x4 = py_coerce(Matrix{Int32}, py_cast(Py, [1.0 2.0; 3.0 4.0]))
     @test x4 isa Matrix{Int32}
     @test x4 == Int32[1 2; 3 4]
@@ -74,8 +77,13 @@ end
 end
 
 @testset "py_cast" begin
-    a = py_cast(Py, true)
-    @test py_cast(Bool, a)
+    a1 = py_cast(Py, true)
+    @test py_cast(Bool, a1)
+    a2 = py_cast(Py, false)
+    @test !py_cast(Bool, a2)
+    a3 = py_cast(Py, true)
+    @test py_cast(Bool, a3)
+
     b = py_cast(Py, "abc")
     @test py_cast(String, b) == "abc"
 end

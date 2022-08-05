@@ -1,5 +1,3 @@
-import LinearAlgebra
-
 struct DynamicArray
     arr :: Any
     eltype :: DataType
@@ -34,30 +32,8 @@ function __init_julia_wrap__()
     G_pymodule_types[] = Py(Py_NULLPTR)
 end
 
-function _jl_newarray(::Ptr{PyObject}, ::Ptr{PyObject}, ::Ptr{PyObject})
-    return Ptr{PyObject}(C_NULL)
-end
-
-function _jl_deallocarray(self::Ptr{PyObject})
-    ptr = C.Ptr{PyJuliaObject}(self)
-    slot = ptr.slot[]
-    if slot != 0
-        G_Obs[slot] = nothing
-        ptr.slot[] = 0
-        push!(G_ObUnusedSlots, slot)
-    end
-    if ptr.weaklist[] != Py_NULLPTR
-        PyAPI.PyObject_ClearWeakRefs(ptr)
-    end
-    free_func = C.Ptr{PyTypeObject}(ptr.ob_base.type).tp_free
-    if !C.is_nullptr(free_func)
-        ccall(free_func, Cvoid, (Ptr{PyObject}, ), self)
-    end
-    nothing
-end
-
 function LinearAlgebra.transpose(d::DynamicArray)
-    DynamicArray(d.arr, d.eltype, d.shape, reverse(d.strides), d.ptr, reverse(d.ndim), d.itemsize, d.typekind, !d.is_c_style)
+    DynamicArray(d.arr, d.eltype, reverse(d.shape), reverse(d.strides), d.ptr, d.ndim, d.itemsize, d.typekind, !d.is_c_style)
 end
 
 function get_typekind(_::Union{Int8, Int16, Int32, Int64})
