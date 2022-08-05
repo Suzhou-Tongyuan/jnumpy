@@ -26,6 +26,10 @@ end
 Py(ptr::C.Ptr{PyObject}) = Py(UnsafeNew(), ptr)
 const G_PyBuiltin = Py(UnsafeNew())
 
+function get_py_builtin()
+    return G_PyBuiltin
+end
+
 function Py(::NewReference, ptr::C.Ptr{PyObject})
     PyAPI.Py_IncRef(ptr)
     return Py(UnsafeNew(), ptr)
