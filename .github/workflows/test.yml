@@ -20,7 +20,7 @@ env:
 jobs:
   # This workflow contains a single job called "build"
   test:
-    name: Julia ${{ matrix.version }} - Python ${{ matrix.python-version }} - ${{ matrix.os }} - ${{ matrix.arch }}
+    name: Julia ${{ matrix.version }} - Python ${{ matrix.python-version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -58,9 +58,6 @@ jobs:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
       
-      - name: add TyPython
-        run: julia --project=./jnumpy/tests/extension -e "import Pkg;Pkg.develop(url=\"./TyPython\")"
-        
       - uses: actions/cache@v1
         env:
           cache-name: cache-artifacts
@@ -71,6 +68,9 @@ jobs:
             ${{ runner.os }}-test-${{ env.cache-name }}-
             ${{ runner.os }}-test-
             ${{ runner.os }}-
+      
+      - name: add TyPython
+        run: julia --project=./jnumpy/tests/extension -e "import Pkg;Pkg.develop(url=\"./TyPython\")"
       
       - name: run pytest
         run: python -m pytest ./jnumpy/tests/test_core.py
