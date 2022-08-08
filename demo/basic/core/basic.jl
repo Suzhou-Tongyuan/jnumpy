@@ -2,7 +2,6 @@ module basic
 
 using TyPython
 using TyPython.CPython
-using FFTW
 CPython.init()
 
 @export_py function int_add(a::Int, b::Int)::Int
