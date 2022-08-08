@@ -7,7 +7,7 @@ const NPY_ARRAY_F_CONTIGUOUS = Cint(0x0002)
 const NPY_ARRAY_ALIGNED = Cint(0x0100)
 const NPY_ARRAY_NOTSWAPPED = Cint(0x0200)
 const NPY_ARRAY_WRITEABLE = Cint(0x0400)
-const NPY_ARR_HAS_DESCR = Cint(0x0800) 
+const NPY_ARR_HAS_DESCR = Cint(0x0800)
 
 const RAWPY_SUPPORTED_NO_COPY_NP_FLAG = NPY_ARRAY_ALIGNED | NPY_ARRAY_WRITEABLE
 
@@ -40,7 +40,7 @@ function get_numpy()
         PyAPI.Py_IncRef(x)
         unsafe_set!(G_numpy, unsafe_unwrap(x))
     end
-    
+
     return G_numpy
 end
 
@@ -92,9 +92,9 @@ function from_ndarray(x::Py)
         ptr = C.Ptr{PyArrayInterface}(_get_capsule_ptr(__array_struct__))
         info = ptr[] :: PyArrayInterface
     end
-    
+
     # TODO: exception check
-    shape = Tuple(Int(i) 
+    shape = Tuple(Int(i)
         for i in unsafe_wrap(Array, convert(Ptr{Py_intptr_t}, info.shape), Int(info.nd); own=false)) :: ShapeType
 
     @switch (Char(info.typekind), Int(info.itemsize)) begin

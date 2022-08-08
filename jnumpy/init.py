@@ -46,9 +46,9 @@ end
 
 def args_from_config(exepath: str, args: list):
     args = [exepath] + args
-    
+
     # python 2 is deprecated, we just consider python 3
-    argv: list[bytes] = [arg.encode('utf-8') for arg in args] 
+    argv: list[bytes] = [arg.encode('utf-8') for arg in args]
     argc = len(argv)
     argc = ctypes.c_int(argc)
     argv = ctypes.POINTER(ctypes.c_char_p)((ctypes.c_char_p * len(argv))(*argv))  # type: ignore
@@ -131,13 +131,13 @@ def init_jl():
 
         argc, argv = args_from_config(jl_exepath, jl_opts)
         lib.jl_parse_opts(ctypes.pointer(argc), ctypes.pointer(argv))
-        
+
         init_func.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
         init_func.restype = None
         init_func(bindir.encode('utf8'), sysimage.encode('utf8'))
         lib.jl_eval_string.argtypes = [ctypes.c_char_p]
         lib.jl_eval_string.restype = ctypes.c_void_p
-        
+
         if not lib.jl_eval_string(rf"""
         try
             import Pkg

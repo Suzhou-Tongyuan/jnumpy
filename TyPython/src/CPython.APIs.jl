@@ -6,7 +6,7 @@ struct BorrowReference end
 
 mutable struct Py
     ptr :: C.Ptr{PyObject}
-    
+
     function Py(::BorrowReference, ptr::C.Ptr{PyObject})
         return new(ptr)
     end
@@ -119,7 +119,7 @@ mutable struct PythonAPIStruct
 
     PyEval_EvalCode::cfunc_t(C.Ptr{PyObject}, C.Ptr{PyObject}, C.Ptr{PyObject}, Except(Py_NULLPTR, C.Ptr{PyObject}))
     Py_CompileString::cfunc_t(Cstring, Cstring, Cint, Except(Py_NULLPTR, C.Ptr{PyObject}))
-    
+
     PyCapsule_GetPointer::cfunc_t(C.Ptr{PyObject}, Cstring, Ptr{Cvoid})
     PyCapsule_GetName::cfunc_t(C.Ptr{PyObject}, Cstring)
     PyCapsule_New::cfunc_t(Ptr{Cvoid}, Cstring, Ptr{Cvoid}, C.Ptr{PyObject})
@@ -283,7 +283,7 @@ function Base.show(io::IO, e::Py)
         return
     end
     x = Py(PyAPI.PyObject_Repr(e))
-    GC.@preserve x begin 
+    GC.@preserve x begin
         size_ref = Ref(0)
         buf = PyAPI.PyUnicode_AsUTF8AndSize(x , size_ref)
         print(io, "Py(", Base.unsafe_string(buf, size_ref[]), ")")
@@ -314,27 +314,3 @@ function py_import(name::AbstractString)
     Py(PyAPI.PyImport_ImportModule(name))
 end
 
-# mutable struct PyConstantStore
-#     Names :: Dict{String, Int}
-#     Initializer :: Dict{String, Any}
-#     Constants :: Vector{Py}
-#     Initialized :: Bool
-#     PyConstantStore() = PyConstantStore(Dict(), Dict(), Py[], false)
-# end
-
-# const SYM_PY_CONST_STORE = "_?RAWPY_PY_CONST_STORE"
-
-# function pyconstantize(store::PyConstantStore, ex)
-#     if ex isa Union{Int, 
-# end
-
-# macro pyconstantize(ex)
-#     store = if !isdefined(__module__, SYM_PY_CONST_STORE)
-#         store = PyConstantStore()
-#         Base.eval(__module__, :(const $SYM_PY_CONST_STORE = $PyConstantStore()))
-#         store
-#     else
-#         getfield(__module__, SYM_PY_CONST_STORE) :: PyConstantStore
-#     end
-#     pyconstantize(store, ex)
-# end

@@ -75,7 +75,7 @@ end
     @test x4 isa Matrix{Int32}
     @test x4 == Int32[1 2 3; 3 4 5]
     @test_throws CPython.PyException py_coerce(Array, py_cast(Py, "abc"))
-    @test_throws MethodError py_cast(Py, a') # adjoint is unspported 
+    @test_throws MethodError py_cast(Py, a') # adjoint is unspported
 end
 
 @testset "py_cast" begin

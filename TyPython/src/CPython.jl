@@ -15,7 +15,7 @@ const CF_RAWPY_MODE_PYTHON = "PYTHON-BASED"
 const CF_RAWPY_MODE_JULIA = "JULIA-BASED"
 
 function is_calling_julia_from_python()
-    result = get!(ENV, CF_RAWPY_MODE) do 
+    result = get!(ENV, CF_RAWPY_MODE) do
         CF_RAWPY_MODE_JULIA
     end
     if result == CF_RAWPY_MODE_PYTHON
