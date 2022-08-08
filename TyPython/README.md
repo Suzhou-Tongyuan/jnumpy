@@ -1,5 +1,9 @@
 # TyPython
 
+
+[![Build Status](https://github.com/Suzhou-Tongyuan/jnumpy/actions/workflows/test.yml/badge.svg?branch=main
+)](https://github.com/Suzhou-Tongyuan/jnumpy/actions/workflows/test.yml?query=branch%3Amain)
+
 TyPython is a Julia package to work with Python in Julia and focusing on the following features:
 
 - the capability of building portable system images.
