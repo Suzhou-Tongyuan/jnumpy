@@ -7,9 +7,9 @@ const NPY_ARRAY_F_CONTIGUOUS = Cint(0x0002)
 const NPY_ARRAY_ALIGNED = Cint(0x0100)
 const NPY_ARRAY_NOTSWAPPED = Cint(0x0200)
 const NPY_ARRAY_WRITEABLE = Cint(0x0400)
-const NPY_ARR_HAS_DESCR = Cint(0x0800) 
+const NPY_ARR_HAS_DESCR = Cint(0x0800)
 
-const RAWPY_SUPPORTED_NO_COPY_NP_FLAG = NPY_ARRAY_ALIGNED | NPY_ARRAY_WRITEABLE
+const TYPY_SUPPORTED_NO_COPY_NP_FLAG = NPY_ARRAY_ALIGNED | NPY_ARRAY_WRITEABLE
 
 function checkbit(x::Cint, bits::Cint)
     return (x & bits) === bits
@@ -40,7 +40,7 @@ function get_numpy()
         PyAPI.Py_IncRef(x)
         unsafe_set!(G_numpy, unsafe_unwrap(x))
     end
-    
+
     return G_numpy
 end
 
@@ -75,13 +75,9 @@ function _get_capsule_ptr(x::Py)
 end
 
 function from_ndarray(x::Py)
-    # if PyAPI.PyObject_IsInstance(x, G_numpy.ndarray) == 0
-    #     error("from_ndarray: $x is not an ndarray")
-    # end
     np = get_numpy()
     if PyAPI.PyObject_HasAttr(x, attribute_symbol_to_pyobject(:__array_struct__)) != 1
         error("from_ndarray: $x has no __array_struct__")
-        # x = G_numpy.copy(x, order=py_cast(Py, "C"))
     end
     __array_struct__ = x.__array_struct__
     ptr = C.Ptr{PyArrayInterface}(_get_capsule_ptr(__array_struct__))
@@ -90,15 +86,15 @@ function from_ndarray(x::Py)
     # TODO: support no-copy transpose in the future
     flags = info.flags
     if (!checkbit(flags, NPY_ARRAY_F_CONTIGUOUS) ||
-        !checkbit(flags, RAWPY_SUPPORTED_NO_COPY_NP_FLAG))
+        !checkbit(flags, TYPY_SUPPORTED_NO_COPY_NP_FLAG))
         x = np.copy(x, order=py_cast(Py, "F"))
         __array_struct__ = x.__array_struct__
         ptr = C.Ptr{PyArrayInterface}(_get_capsule_ptr(__array_struct__))
         info = ptr[] :: PyArrayInterface
     end
-    
+
     # TODO: exception check
-    shape = Tuple(Int(i) 
+    shape = Tuple(Int(i)
         for i in unsafe_wrap(Array, convert(Ptr{Py_intptr_t}, info.shape), Int(info.nd); own=false)) :: ShapeType
 
     @switch (Char(info.typekind), Int(info.itemsize)) begin
@@ -145,7 +141,7 @@ function from_ndarray(x::Py)
             register_root(x,
                 unsafe_wrap(Array, convert(Ptr{ComplexF64}, info.data), shape; own=false))
         @case (code, nbytes)
-            error("unsupported numpy dtype: $(code) $(nbytes)")
+            throw(error("unsupported numpy dtype: $(code) $(nbytes)"))
     end
 end
 

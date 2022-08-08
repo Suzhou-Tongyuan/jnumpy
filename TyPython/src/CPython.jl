@@ -1,5 +1,6 @@
 module CPython
 using MLStyle: @match, @switch
+import LinearAlgebra
 import TyPython.C
 import TyPython.Utils: capture_out, unroll_do!
 export get_py_builtin, py_throw, WITH_GIL, GILNoRaise
@@ -7,17 +8,17 @@ export py_cast, py_coerce
 export Py
 
 const G_IsInitialized = Ref(false)
-const CF_RAWPY_MODE = "RAWPY_MODE"
-const CF_RAWPY_PY_APIPTR = "RAWPY_PY_APIPTR"
-const CF_RAWPY_PY_DLL = "RAWPY_PY_DLL"
-const CF_RAWPY_MODE_PYTHON = "PYTHON-BASED"
-const CF_RAWPY_MODE_JULIA = "JULIA-BASED"
+const CF_TYPY_MODE = "TYPY_MODE"
+const CF_TYPY_PY_APIPTR = "TYPY_PY_APIPTR"
+const CF_TYPY_PY_DLL = "TYPY_PY_DLL"
+const CF_TYPY_MODE_PYTHON = "PYTHON-BASED"
+const CF_TYPY_MODE_JULIA = "JULIA-BASED"
 
 function is_calling_julia_from_python()
-    result = get!(ENV, CF_RAWPY_MODE) do 
-        CF_RAWPY_MODE_JULIA
+    result = get!(ENV, CF_TYPY_MODE) do
+        CF_TYPY_MODE_JULIA
     end
-    if result == CF_RAWPY_MODE_PYTHON
+    if result == CF_TYPY_MODE_PYTHON
         return true
     end
     return false

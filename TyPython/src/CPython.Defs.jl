@@ -39,7 +39,7 @@ unsafe_broaden_type(t) = t
 
 Given an underlying type, return a type (can be union) that is more high-level but convertable to the underlying type.
 
-i.e., given `t::DataType`, `T <: unsafe_broaden_type(t)` and `o :: T`, 
+i.e., given `t::DataType`, `T <: unsafe_broaden_type(t)` and `o :: T`,
 we have
 ```
 Base.unsafe_convert(t, Base.cconvert(t), o) isa t
@@ -75,7 +75,7 @@ function _support_ccall!(ln::LineNumberNode, @nospecialize(CFuncType::DataType))
         :(return $sym_retval)
     else
         Expr(:if,
-            :($ErrorCode === $sym_retval), 
+            :($ErrorCode === $sym_retval),
             :($CPython.py_throw()),
             :(return $sym_retval)
         )
@@ -176,7 +176,7 @@ Base.@kwdef struct PyTypeObject
     tp_mro::Ptr{Cvoid} = C_NULL
     tp_cache::Ptr{Cvoid} = C_NULL
     tp_subclasses::Ptr{Cvoid} = C_NULL
-    tp_weaklist::Ptr{Cvoid} = C_NULL    
+    tp_weaklist::Ptr{Cvoid} = C_NULL
     tp_del::Ptr{Cvoid} = C_NULL
 
     # Type attribute cache version tag. Added in version 2.6

@@ -23,19 +23,19 @@ end
 
 function init()
     G_IsInitialized[] && return
-    if haskey(ENV, CF_RAWPY_PY_APIPTR)
-        ptr = reinterpret(Ptr{Cvoid}, parse(UInt, ENV[CF_RAWPY_PY_APIPTR]))
+    if haskey(ENV, CF_TYPY_PY_APIPTR)
+        ptr = reinterpret(Ptr{Cvoid}, parse(UInt, ENV[CF_TYPY_PY_APIPTR]))
         init(ptr)
-    elseif haskey(ENV, CF_RAWPY_PY_DLL)
+    elseif haskey(ENV, CF_TYPY_PY_DLL)
         cwd = pwd()
         try
-            ptr = load_pydll!(ENV[CF_RAWPY_PY_DLL])
+            ptr = load_pydll!(ENV[CF_TYPY_PY_DLL])
             init(ptr)
         finally
             cd(cwd)
         end
     else
-        error("Python shared library not found: try setting the environment variable $(CF_RAWPY_PY_APIPTR) or $(CF_RAWPY_PY_DLL).")
+        error("Python shared library not found: try setting the environment variable $(CF_TYPY_PY_APIPTR) or $(CF_TYPY_PY_DLL).")
     end
 end
 

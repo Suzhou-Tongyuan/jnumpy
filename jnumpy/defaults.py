@@ -11,7 +11,7 @@ def get_symlink_dir():
     return os.path.join(get_jnumpy_dir(), "bin")
 
 def get_julia_exe():
-    julia_exepath = os.getenv("RAWPY_JL_EXE")
+    julia_exepath = os.getenv("TYPY_JL_EXE")
     if not julia_exepath:
         julia_exepath = get_default_julia_exe()
     return julia_exepath

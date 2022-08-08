@@ -8,8 +8,8 @@ end
     Py(PyAPI.PyObject_GetAttr(self, attribute_symbol_to_pyobject(name)))
 end
 
-@noinline function Base.hasproperty(self::Py, name::Symbol)::Py
-    Py(PyAPI.PyObject_GetAttr(self, attribute_symbol_to_pyobject(name)))
+@noinline function Base.hasproperty(self::Py, name::Symbol)::Bool
+   PyAPI.PyObject_HasAttr(self, attribute_symbol_to_pyobject(name)) != 0
 end
 
 @noinline function Base.setproperty!(self::Py, name::Symbol, value::Py)::Py
@@ -120,19 +120,19 @@ end
 end
 
 @eval function Base.$(:(>))(x::Py, y::Py)
-    return PyAPI.PyObject_IsTrue(py_lt(x, y)) != 0
-end
-
-@eval function Base.$(:(>=))(x::Py, y::Py)
-    return PyAPI.PyObject_IsTrue(py_le(x, y)) != 0
-end
-
-@eval function Base.$(:(<))(x::Py, y::Py)
     return PyAPI.PyObject_IsTrue(py_gt(x, y)) != 0
 end
 
-@eval function Base.$(:(<=))(x::Py, y::Py)
+@eval function Base.$(:(>=))(x::Py, y::Py)
     return PyAPI.PyObject_IsTrue(py_ge(x, y)) != 0
+end
+
+@eval function Base.$(:(<))(x::Py, y::Py)
+    return PyAPI.PyObject_IsTrue(py_lt(x, y)) != 0
+end
+
+@eval function Base.$(:(<=))(x::Py, y::Py)
+    return PyAPI.PyObject_IsTrue(py_le(x, y)) != 0
 end
 
 function py_dir(x::Py)
@@ -253,10 +253,26 @@ function py_cast(::Type{Py}, o::Py)
     return o
 end
 
-function py_cast(::Type{Py}, o::T) where T <: StridedArray
-    py_coerce(Py, o)
+function py_cast(::Type{Py}, o::T) where T <: AbstractArray
+    py_cast_array(o, array_cast_trait(T))
 end
 
-function get_py_builtin()
-    return G_PyBuiltin
+struct SupportedArrayCast end
+struct UnsupportedArrayCast end
+
+
+function array_cast_trait(T)
+    return UnsupportedArrayCast()
+end
+
+function array_cast_trait(::Type{TArray}) where TArray<:StridedArray
+    return SupportedArrayCast()
+end
+
+function array_cast_trait(::Type{LinearAlgebra.Transpose{S, TArray}}) where {S, TArray<:StridedArray{S}}
+    return SupportedArrayCast()
+end
+
+function py_cast_array(o::T, ::SupportedArrayCast) where T<:AbstractArray
+    py_coerce(Py, o)
 end

@@ -7,13 +7,13 @@ import shlex
 import contextlib
 from .defaults import get_julia_exe, get_project_args
 
-CF_RAWPY_MODE = "RAWPY_MODE"
-CF_RAWPY_PY_APIPTR = "RAWPY_PY_APIPTR"
-CF_RAWPY_PY_DLL = "RAWPY_PY_DLL"
-CF_RAWPY_MODE_PYTHON = "PYTHON-BASED"
-CF_RAWPY_MODE_JULIA = "JULIA-BASED"
-CF_RAWPY_JL_EXE = "RAWPY_JL_EXE"
-CF_RAWPY_JL_OPTS = "RAWPY_JL_OPTS"
+CF_TYPY_MODE = "TYPY_MODE"
+CF_TYPY_PY_APIPTR = "TYPY_PY_APIPTR"
+CF_TYPY_PY_DLL = "TYPY_PY_DLL"
+CF_TYPY_MODE_PYTHON = "PYTHON-BASED"
+CF_TYPY_MODE_JULIA = "JULIA-BASED"
+CF_TYPY_JL_EXE = "TYPY_JL_EXE"
+CF_TYPY_JL_OPTS = "TYPY_JL_OPTS"
 CF_JNUMPY_HOME = "JNUMPY_HOME"
 
 julia_info_query = r"""
@@ -46,9 +46,9 @@ end
 
 def args_from_config(exepath: str, args: list):
     args = [exepath] + args
-    
+
     # python 2 is deprecated, we just consider python 3
-    argv: list[bytes] = [arg.encode('utf-8') for arg in args] 
+    argv: list[bytes] = [arg.encode('utf-8') for arg in args]
     argc = len(argv)
     argc = ctypes.c_int(argc)
     argv = ctypes.POINTER(ctypes.c_char_p)((ctypes.c_char_p * len(argv))(*argv))  # type: ignore
@@ -98,21 +98,21 @@ def init_jl():
     global _add_deps
     global _activate_proj
     global project_dir
-    if os.getenv(CF_RAWPY_MODE) == CF_RAWPY_MODE_JULIA:
+    if os.getenv(CF_TYPY_MODE) == CF_TYPY_MODE_JULIA:
         return
-    elif os.getenv(CF_RAWPY_MODE) == CF_RAWPY_MODE_PYTHON:
-        assert os.getenv(CF_RAWPY_PY_APIPTR, str(ctypes.pythonapi._handle))
+    elif os.getenv(CF_TYPY_MODE) == CF_TYPY_MODE_PYTHON:
+        assert os.getenv(CF_TYPY_PY_APIPTR, str(ctypes.pythonapi._handle))
         return
-    elif not os.getenv(CF_RAWPY_MODE):
-        os.environ[CF_RAWPY_MODE] = CF_RAWPY_MODE_PYTHON
-        os.environ[CF_RAWPY_PY_APIPTR] = str(ctypes.pythonapi._handle)
+    elif not os.getenv(CF_TYPY_MODE):
+        os.environ[CF_TYPY_MODE] = CF_TYPY_MODE_PYTHON
+        os.environ[CF_TYPY_PY_APIPTR] = str(ctypes.pythonapi._handle)
     else:
-        raise Exception("Unknown mode: " + (os.getenv(CF_RAWPY_MODE) or "<unset>"))
+        raise Exception("Unknown mode: " + (os.getenv(CF_TYPY_MODE) or "<unset>"))
 
     jl_exepath = get_julia_exe()
 
 
-    jl_opts = shlex.split(os.getenv(CF_RAWPY_JL_OPTS, ""))
+    jl_opts = shlex.split(os.getenv(CF_TYPY_JL_OPTS, ""))
     jl_opts_proj = get_project_args()
     cmd = [jl_exepath, jl_opts_proj, *jl_opts, '--startup-file=no', '-O0', '--compile=min', '-e', julia_info_query]
     bindir, libpath, sysimage, project_dir = subprocess.run(
@@ -131,13 +131,13 @@ def init_jl():
 
         argc, argv = args_from_config(jl_exepath, jl_opts)
         lib.jl_parse_opts(ctypes.pointer(argc), ctypes.pointer(argv))
-        
+
         init_func.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
         init_func.restype = None
         init_func(bindir.encode('utf8'), sysimage.encode('utf8'))
         lib.jl_eval_string.argtypes = [ctypes.c_char_p]
         lib.jl_eval_string.restype = ctypes.c_void_p
-        
+
         if not lib.jl_eval_string(rf"""
         try
             import Pkg
