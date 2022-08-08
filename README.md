@@ -52,7 +52,7 @@ Note that JNumPy will install julia in `JNUMPY_HOME` for you, if there is no Jul
     from example import jl_mat_mul
 
     x = np.array([[1,2],[3,4]])
-    y = np.array([[3,4],[2,1]])
+    y = np.array([[4,3],[2,1]])
     jl_mat_mul(x, y)
     # array([[ 8,  5],
     #       [20, 13]])
