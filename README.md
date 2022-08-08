@@ -40,7 +40,7 @@ Note that JNumPy will install julia in `JNUMPY_HOME` for you, if there is no Jul
     end
     ```
 
-3. initialize and import julia function in python
+3. initialize and import the julia functions in Python
 
     ```python
     from jnumpy import init_jl, exec_julia, include_src
