@@ -19,9 +19,20 @@ env:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+  test:
+    name: Julia ${{ matrix.version }} - Python ${{ matrix.python-version }} - ${{ matrix.os }} - ${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        version:
+          - '1.6'
+          - '1.7'
+        os:
+          - ubuntu-latest
+        arch:
+          - x64
+        python-version: ['3.7']
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -31,7 +42,8 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4.2.0
         with:
-          python-version: ^3.7
+          python-version: ${{ matrix.python-version }}
+          architecture: ${{ matrix.arch }}
 
       # Runs a single command using the runners shell
       - name: pip insatll
@@ -40,22 +52,31 @@ jobs:
       - name: find python dll
         run: echo "RAWPY_PY_DLL=$(python -m find_libpython)" >> $GITHUB_ENV
         
-      - name: list env
-        run: env
-        
       - name: Setup Julia environment
-        uses: julia-actions/setup-julia@v1.8.1
+        uses: julia-actions/setup-julia@v1
         with:
-          version: 1.6
+          version: ${{ matrix.version }}
+          arch: ${{ matrix.arch }}
       
       - name: add TyPython
         run: julia --project=./jnumpy/tests/extension -e "import Pkg;Pkg.develop(url=\"./TyPython\")"
+        
+      - uses: actions/cache@v1
+        env:
+          cache-name: cache-artifacts
+        with:
+          path: ~/.julia/artifacts
+          key: ${{ runner.os }}-test-${{ env.cache-name }}-${{ hashFiles('**/Project.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-test-${{ env.cache-name }}-
+            ${{ runner.os }}-test-
+            ${{ runner.os }}-
       
       - name: run pytest
         run: python -m pytest ./jnumpy/tests/test_core.py
       
       - name: Run Julia package tests
-        uses: julia-actions/julia-runtest@v1.7.0
+        uses: julia-actions/julia-runtest@v1
         with:
           project: ./TyPython
       
