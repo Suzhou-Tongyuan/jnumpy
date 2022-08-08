@@ -12,7 +12,7 @@
 
 1. add TyPython dependency
 ```
-julia --project=. -e "import Pkg; Pkg.add("TyPython")
+julia --project=. -e "import Pkg; Pkg.add(\"TyPython\")"
 ```
 
 2. write and export julia functions in file `example.jl`
