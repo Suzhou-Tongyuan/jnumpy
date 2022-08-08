@@ -254,33 +254,25 @@ function py_cast(::Type{Py}, o::Py)
 end
 
 function py_cast(::Type{Py}, o::T) where T <: AbstractArray
-    if support_array(T)
-        py_cast_array(o, SupportedArrayCast())
-    else
-        py_cast_array(o, NonSupportedArrayCast())
-    end
+    py_cast_array(o, array_cast_trait(T))
 end
 
 struct SupportedArrayCast end
-struct NonSupportedArrayCast end
+struct UnsupportedArrayCast end
 
 
-function support_array(T)
-    return false
+function array_cast_trait(T)
+    return UnsupportedArrayCast()
 end
 
-function support_array(::Type{TArray}) where TArray<:StridedArray
-    return true
+function array_cast_trait(::Type{TArray}) where TArray<:StridedArray
+    return SupportedArrayCast()
 end
 
-function support_array(::Type{LinearAlgebra.Transpose{S, TArray}}) where {S, TArray<:StridedArray{S}}
-    return true
+function array_cast_trait(::Type{LinearAlgebra.Transpose{S, TArray}}) where {S, TArray<:StridedArray{S}}
+    return SupportedArrayCast()
 end
 
-function py_cast_array(o::T, ::SupportedArrayCast) where T <: AbstractArray
+function py_cast_array(o::T, ::SupportedArrayCast) where T<:AbstractArray
     py_coerce(Py, o)
-end
-
-function py_cast_array(o::T, ::NonSupportedArrayCast) where T <: AbstractArray
-    error("Non Supported Array Cast!")
 end

@@ -75,13 +75,9 @@ function _get_capsule_ptr(x::Py)
 end
 
 function from_ndarray(x::Py)
-    # if PyAPI.PyObject_IsInstance(x, G_numpy.ndarray) == 0
-    #     error("from_ndarray: $x is not an ndarray")
-    # end
     np = get_numpy()
     if PyAPI.PyObject_HasAttr(x, attribute_symbol_to_pyobject(:__array_struct__)) != 1
         error("from_ndarray: $x has no __array_struct__")
-        # x = G_numpy.copy(x, order=py_cast(Py, "C"))
     end
     __array_struct__ = x.__array_struct__
     ptr = C.Ptr{PyArrayInterface}(_get_capsule_ptr(__array_struct__))
@@ -145,7 +141,7 @@ function from_ndarray(x::Py)
             register_root(x,
                 unsafe_wrap(Array, convert(Ptr{ComplexF64}, info.data), shape; own=false))
         @case (code, nbytes)
-            error("unsupported numpy dtype: $(code) $(nbytes)")
+            throw(error("unsupported numpy dtype: $(code) $(nbytes)"))
     end
 end
 

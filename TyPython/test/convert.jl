@@ -68,12 +68,14 @@ end
     @test_throws CPython.PyException py_coerce(Tuple{Int, String}, py_cast(Py, (1, 1)))
 
     @test py_coerce(String, py_cast(Py, "äbc")) == "äbc"
-    @test py_coerce(Array, py_cast(Py, [1 2; 3 4])) == [1 2; 3 4]
-    @test py_coerce(Array, py_cast(Py, transpose([1 2; 3 4]))) == [1 3; 2 4]
-    x4 = py_coerce(Matrix{Int32}, py_cast(Py, [1.0 2.0; 3.0 4.0]))
+    a = [1 2 3; 3 4 5]
+    @test py_coerce(Array, py_cast(Py, a)) == [1 2 3; 3 4 5]
+    @test py_coerce(Array, py_cast(Py, transpose(a))) == [1 3; 2 4; 3 5]
+    x4 = py_coerce(Matrix{Int32}, py_cast(Py, Float32.(a)))
     @test x4 isa Matrix{Int32}
-    @test x4 == Int32[1 2; 3 4]
+    @test x4 == Int32[1 2 3; 3 4 5]
     @test_throws CPython.PyException py_coerce(Array, py_cast(Py, "abc"))
+    @test_throws MethodError py_cast(Py, a') # adjoint is unspported 
 end
 
 @testset "py_cast" begin
