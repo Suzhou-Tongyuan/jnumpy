@@ -1,0 +1,4 @@
+[deps]
+FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
+MKL = "33e6dc65-8f57-5167-99aa-e5a354878fb2"
+TyPython = "9c4566a2-237d-4c69-9a5e-9d27b7d0881b"
