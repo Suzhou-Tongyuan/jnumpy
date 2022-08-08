@@ -14,6 +14,7 @@ MLStyle = "d8e11817-5142-5d16-987a-aa16d5891078"
 MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 
 [compat]
+julia = "1"
 MLStyle = "0.4.13"
 MacroTools = "0.5"
 IOCapture = "0.2"
