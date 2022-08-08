@@ -9,7 +9,7 @@ const NPY_ARRAY_NOTSWAPPED = Cint(0x0200)
 const NPY_ARRAY_WRITEABLE = Cint(0x0400)
 const NPY_ARR_HAS_DESCR = Cint(0x0800)
 
-const RAWPY_SUPPORTED_NO_COPY_NP_FLAG = NPY_ARRAY_ALIGNED | NPY_ARRAY_WRITEABLE
+const TYPY_SUPPORTED_NO_COPY_NP_FLAG = NPY_ARRAY_ALIGNED | NPY_ARRAY_WRITEABLE
 
 function checkbit(x::Cint, bits::Cint)
     return (x & bits) === bits
@@ -86,7 +86,7 @@ function from_ndarray(x::Py)
     # TODO: support no-copy transpose in the future
     flags = info.flags
     if (!checkbit(flags, NPY_ARRAY_F_CONTIGUOUS) ||
-        !checkbit(flags, RAWPY_SUPPORTED_NO_COPY_NP_FLAG))
+        !checkbit(flags, TYPY_SUPPORTED_NO_COPY_NP_FLAG))
         x = np.copy(x, order=py_cast(Py, "F"))
         __array_struct__ = x.__array_struct__
         ptr = C.Ptr{PyArrayInterface}(_get_capsule_ptr(__array_struct__))
