@@ -79,7 +79,7 @@ There are several examples presented in the `demo` directory. Those examples are
 
 - `demo/basic`: a tiny Python package to give an example of how to use JNumPy.
 
-- `demo/kmeans`: a tiny Python package wrapping [ParallelKMeans.jl](https://pydatablog.github.io/ParallelKMeans.jl/stable/). It produces a performance gain in a factor of 10x against Scikit-Learn.
+- `demo/kmeans`: a tiny Python package wrapping [ParallelKMeans.jl](https://pydatablog.github.io/ParallelKMeans.jl/stable/). It produces a 10x performance gain against Scikit-Learn.
 
 - `demo/fft`: a tiny Python package wrapping FFTW.jl. It allows users to access FFT plans for accelerating FFTs.
 
