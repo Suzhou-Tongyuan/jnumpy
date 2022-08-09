@@ -123,9 +123,9 @@ def activate_project(cache: LocalProjectCache):
     _activate_project_impl(cache.py_package_rootdir)
 
     if not is_initialized():
-        exec_julia(f"Pkg.develop(path={escape_to_julia_rawstr(TyPython_directory)})")
-        exec_julia("Pkg.resolve()")
-        exec_julia("Pkg.instantiate()")
+        exec_julia(f"Pkg.develop(path={escape_to_julia_rawstr(TyPython_directory)})", use_gil=False)
+        exec_julia("Pkg.resolve()", use_gil=False)
+        exec_julia("Pkg.instantiate()", use_gil=False)
     try:
         yield
     finally:

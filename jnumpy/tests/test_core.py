@@ -1,4 +1,4 @@
-from .extension import (
+from jnumpy.tests.extension import (
     jl_not,
     int_add,
     float_add,

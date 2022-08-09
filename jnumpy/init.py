@@ -36,6 +36,7 @@ println(dirname(Pkg.project().path))
 
 gil_template = r"""
 begin
+    import TyPython
     using TyPython.CPython
     try
         Base.@eval begin
@@ -62,11 +63,12 @@ end
 
 no_gil_template = r"""
 begin
+    import TyPython
     using TyPython.CPython
     try
         {}
     catch e
-        showerror(stdout, e, catch_backtrace())
+        showerror(stderr, e, catch_backtrace())
     end
 end
 """
@@ -183,8 +185,7 @@ def init_jl():
                 source_code_bytes = source_code.encode("utf8")
                 if (
                     not lib.jl_eval_string(source_code_bytes)
-                    or lib.jl_exception_occurred()
-                ):
+                ) and lib.jl_exception_occurred():
                     raise JuliaError(ef.getvalue())
                 return None
 
