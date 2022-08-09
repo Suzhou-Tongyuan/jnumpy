@@ -1,2 +1,2 @@
 sh build.sh
-poetry -m poetry publish
+python -m poetry publish
