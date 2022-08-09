@@ -5,7 +5,8 @@ using TyPython.CPython
 using MKL
 import FFTW
 
-const FFT1D_PlanType = Base._return_type(FFTW.plan_fft, (StridedVector{ComplexF64}, Int))
+
+const FFT1D_PlanType = Union{Base.return_types(FFTW.plan_fft, (StridedVector{ComplexF64}, Int))...}
 const plan1Ds = Dict{Tuple{DataType, NTuple{N, Int} where N}, FFT1D_PlanType}()
 
 """

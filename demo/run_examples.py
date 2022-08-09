@@ -5,9 +5,9 @@ from kmeans import jl_kmeans
 
 print("jl_int_add(1, 2) =", jl_int_add(1, 2), "\n")
 
-a = np.array([[1, 2],[3, 4]])
-b = np.array([[4, 3],[2, 1]])
-print("jl_mat_mul(a,b) =\n", jl_mat_mul(a,b), "\n")
+a = np.array([[1, 2], [3, 4]])
+b = np.array([[4, 3], [2, 1]])
+print("jl_mat_mul(a,b) =\n", jl_mat_mul(a, b), "\n")
 
 x = np.array([0, 1, 2, 1])
 print("x =\n", x, "\n")

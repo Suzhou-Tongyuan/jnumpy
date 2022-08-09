@@ -3,28 +3,22 @@ import io
 import os
 import subprocess
 import ctypes
-import json
 import shlex
 import contextlib
-import pathlib
-import typing_extensions
-import toml
-import typing
-from pydantic.dataclasses import dataclass
-from pydantic import ValidationError
+from .utils import escape_to_julia_rawstr
 from .defaults import get_julia_exe, get_project_args
+from .envars import (
+    CF_TYPY_JL_OPTS,
+    CF_TYPY_MODE,
+    CF_TYPY_MODE_JULIA,
+    CF_TYPY_MODE_PYTHON,
+    CF_TYPY_PY_APIPTR,
+    TyPython_directory,
+)
 
-CF_TYPY_MODE = "TYPY_MODE"
-CF_TYPY_PY_APIPTR = "TYPY_PY_APIPTR"
-CF_TYPY_PY_DLL = "TYPY_PY_DLL"
-CF_TYPY_MODE_PYTHON = "PYTHON-BASED"
-CF_TYPY_MODE_JULIA = "JULIA-BASED"
-CF_TYPY_JL_EXE = "TYPY_JL_EXE"
-CF_TYPY_JL_OPTS = "TYPY_JL_OPTS"
-CF_JNUMPY_HOME = "JNUMPY_HOME"
-
-# debug
+# XXX: adding an environment variable for fast debugging:
 # os.environ[CF_TYPY_JL_OPTS] = "--compile=min -O0"
+
 
 julia_info_query = r"""
 import Libdl
@@ -39,36 +33,8 @@ println(dirname(Pkg.project().path))
     "\r", ";"
 )
 
-TyPython_dir = str(pathlib.Path(__file__).parent.absolute() / "TyPython")
 
-
-class JuliaProjectDict(typing_extensions.TypedDict):
-    name: str
-    deps: typing.Dict[str, str]
-
-
-@dataclass
-class JuliaProject:
-    name: str
-    deps: typing.Dict[str, str]
-
-
-class ParseProjectResult:
-    proj: JuliaProject
-
-
-def check_project(
-    fullproj: dict, result: ParseProjectResult
-) -> typing_extensions.TypeGuard[JuliaProjectDict]:
-    try:
-        proj: JuliaProject = JuliaProject.__pydantic_model__.parse_obj(fullproj)  # type: ignore
-        result.proj = proj
-        return True
-    except ValidationError:
-        return False
-
-
-exec_template = r"""
+gil_template = r"""
 begin
     using TyPython.CPython
     try
@@ -94,6 +60,17 @@ begin
 end
 """
 
+no_gil_template = r"""
+begin
+    using TyPython.CPython
+    try
+        {}
+    catch e
+        showerror(stdout, e, catch_backtrace())
+    end
+end
+"""
+
 
 def args_from_config(exepath: str, args: list):
     args = [exepath] + args
@@ -106,100 +83,9 @@ def args_from_config(exepath: str, args: list):
     return argc, argv
 
 
-def escape_string(s: str):
-    return json.dumps(s, ensure_ascii=False)
-
-def escape_to_julia_rawstr(s: str):
-    return "raw" + json.dumps(s, ensure_ascii=False)
-
-def exec_julia(x):
+def exec_julia(x, use_gil: bool = True):
     global _eval_jl
-    _eval_jl(x)  # type: ignore
-
-
-def include_src(src_file: str, current_file_path: str = "./pseudo_file_path"):
-    """
-    include julia module in src_file
-    Arguments:
-      src_file:
-        the path of julia file releative to file path.
-      file_path(option):
-        should be `__file__`, empty in repl mode.
-    """
-    # activate project before include module
-    project_dir = pathlib.Path(current_file_path).absolute().parent
-    src_abspath = project_dir.joinpath(src_file)
-    exec_julia(r"include({})".format(escape_to_julia_rawstr(src_abspath.as_posix())))
-
-_path_to_modulenames: dict[str, tuple[str, str, str, JuliaProjectDict]] = {}
-
-
-def load_project(file_path: str = "."):
-    """
-    include julia module in project
-
-    Arguments:
-      file_path(option):
-        should be `__file__`, empty in repl mode.
-    """
-    # activate project before include module
-    file_dir = pathlib.Path(file_path).absolute().parent.as_posix()
-    res = _path_to_modulenames.get(file_dir)
-    if res is not None:
-        return res
-
-    project_path = os.path.join(file_dir, "Project.toml")
-    fullproj = toml.load(str(project_path))
-    result = ParseProjectResult()
-    if not check_project(fullproj, result):
-        raise RuntimeError(
-            f"{file_dir} does not have a Project.toml with a top-level"
-            f"entry 'name = xxx' and the '[deps]' section."
-        )
-    proj = result.proj
-    res = _path_to_modulenames[file_dir] = (proj.name, file_dir, project_path, fullproj)
-    with activate_project(project_path, file_dir, fullproj):
-        exec_julia("import {0}".format(fullproj["name"]))
-
-    return res
-
-
-@contextlib.contextmanager
-def activate_project(project_path: str, file_dir: str, fullproj: JuliaProjectDict):
-    if fullproj["deps"].pop("TyPython", None):
-        with open(project_path, "w", encoding="utf-8") as f:
-            toml.dump(fullproj, f)
-    activate_proj(file_dir)
-    try:
-        fullproj["deps"]["TyPython"] = "9c4566a2-237d-4c69-9a5e-9d27b7d0881b"
-        with open(project_path, "w", encoding="utf-8") as f:
-            toml.dump(fullproj, f)
-        try:
-            yield
-        finally:
-            with open(project_path, "w", encoding="utf-8") as f:
-                del fullproj["deps"]["TyPython"]
-                toml.dump(fullproj, f)
-    finally:
-        activate_proj(default_project_dir)
-
-
-def init_project(file_path):
-    modulename, file_dir, project_path, fullproj = load_project(file_path)
-    with activate_project(project_path, file_dir, fullproj):
-        exec_julia("import {0};TyPython.CPython.init();{0}.init()".format(modulename))
-
-
-def activate_proj(proj_dir: str):
-    global _activate_proj
-    _activate_proj(proj_dir)
-
-
-def add_deps(file_path: str):
-    # parse the Project.toml in file's dir and add dependencies to working project
-    toml_path = os.path.join(os.path.dirname(file_path), "Project.toml")
-    global _add_deps
-    _add_deps(toml_path)
+    _eval_jl(x, use_gil)  # type: ignore
 
 
 class JuliaError(Exception):
@@ -263,14 +149,23 @@ def init_jl():
         try
             import Pkg
             Pkg.activate({escape_to_julia_rawstr(default_project_dir)}, io=devnull)
-            if !haskey(Pkg.project().dependencies, "TyPython")
-                Pkg.develop(path={escape_to_julia_rawstr(TyPython_dir)})
+
+            is_instantiated = try
+                Pkg.Operations.is_instantiated(Pkg.Types.Context().env)
+                true
+            catch
+                false
             end
-            Pkg.instantiate()
+            if !haskey(Pkg.project().dependencies, "TyPython") || !is_instantiated
+                Pkg.develop(path={escape_to_julia_rawstr(TyPython_directory)})
+                Pkg.resolve()
+                Pkg.instantiate()
+            end
+
             import TyPython
             TyPython.CPython.init()
         catch err
-            showerror(stderr, err, catch_backtrace())
+            showerror(stdout, err, catch_backtrace())
             rethrow()
         end
         """.encode(
@@ -279,43 +174,19 @@ def init_jl():
         ):
             raise RuntimeError("invalid julia initialization")
 
-        def _eval_jl(x: str):
+        def _eval_jl(x: str, use_gil: bool):
             with contextlib.redirect_stderr(io.StringIO()) as ef:
-                source_code = exec_template.format(x).encode("utf8")
-                if not lib.jl_eval_string(source_code) or lib.jl_exception_occurred():
+                if use_gil:
+                    source_code = gil_template.format(x)
+                else:
+                    source_code = no_gil_template.format(x)
+                source_code_bytes = source_code.encode("utf8")
+                if (
+                    not lib.jl_eval_string(source_code_bytes)
+                    or lib.jl_exception_occurred()
+                ):
                     raise JuliaError(ef.getvalue())
                 return None
-
-        def _activate_proj(proj_dir: str):
-            if not lib.jl_eval_string(
-                rf"""
-            try
-                Pkg.activate({escape_to_julia_rawstr(proj_dir)}, io=devnull)
-                Pkg.instantiate()
-            catch err
-                showerror(stdout, err, catch_backtrace())
-                rethrow()
-            end
-            """.encode(
-                    "utf8"
-                )
-            ):
-                raise RuntimeError(f"fail to activate julia projects {proj_dir}")
-
-        def _add_deps(toml_path: str):
-            if not lib.jl_eval_string(
-                rf"""
-            try
-                TyPython.Utils.add_deps({escape_to_julia_rawstr(toml_path)})
-            catch err
-                showerror(stderr, err, catch_backtrace())
-                rethrow()
-            end
-            """.encode(
-                    "utf8"
-                )
-            ):
-                raise RuntimeError("fail to add julia dependencies")
 
     finally:
         os.chdir(old_cwd)
