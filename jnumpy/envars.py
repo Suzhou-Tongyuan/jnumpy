@@ -9,4 +9,4 @@ CF_TYPY_JL_EXE = "TYPY_JL_EXE"
 CF_TYPY_JL_OPTS = "TYPY_JL_OPTS"
 CF_JNUMPY_HOME = "JNUMPY_HOME"
 
-TyPython_directory = str(pathlib.Path(__file__).parent.absolute() / "TyPython")
+TyPython_directory = pathlib.Path(__file__).parent.absolute().joinpath("TyPython").as_posix()
