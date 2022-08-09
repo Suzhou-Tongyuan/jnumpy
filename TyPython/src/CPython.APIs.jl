@@ -116,6 +116,9 @@ mutable struct PythonAPIStruct
     PyFloat_FromDouble::cfunc_t(Cdouble, Except(Py_NULLPTR, C.Ptr{PyObject}))
     PyComplex_AsCComplex::cfunc_t(C.Ptr{PyObject}, Py_complex) # except .real is -1.0 ana error occurred
     PyComplex_FromCComplex::cfunc_t(Py_complex, C.Ptr{PyObject})
+    PyLong_AsSsize_t::cfunc_t(C.Ptr{PyObject}, Py_ssize_t) # except -1 ana error occurred
+    PyNumber_Check::cfunc_t(C.Ptr{PyObject}, Cint)
+    PyNumber_Long::cfunc_t(C.Ptr{PyObject}, C.Ptr{PyObject})
 
     PyEval_EvalCode::cfunc_t(C.Ptr{PyObject}, C.Ptr{PyObject}, C.Ptr{PyObject}, Except(Py_NULLPTR, C.Ptr{PyObject}))
     Py_CompileString::cfunc_t(Cstring, Cstring, Cint, Except(Py_NULLPTR, C.Ptr{PyObject}))
@@ -126,9 +129,9 @@ mutable struct PythonAPIStruct
     PyObject_ClearWeakRefs::cfunc_t(C.Ptr{PyObject}, Cvoid)
     PyCFunction_NewEx::cfunc_t(Ptr{Cvoid}, Ptr{Cvoid}, Ptr{Cvoid}, Except(Py_NULLPTR, C.Ptr{PyObject}))
     Py_AtExit::cfunc_t(Ptr{Cvoid}, Cint)
-    Py_None :: Py
-    Py_True :: Py
-    Py_False :: Py
+    Py_None::Py
+    Py_True::Py
+    Py_False::Py
     PythonAPIStruct() = new()
 end
 
@@ -172,6 +175,18 @@ end
         return r
     end
     return f()
+end
+
+@inline function GIL_BEGIN()
+    if is_calling_julia_from_python() && G_IsInitialized[]
+        return g = PyAPI.PyGILState_Ensure()
+    end
+end
+
+@inline function GIL_END(g)
+    if is_calling_julia_from_python() && G_IsInitialized[]
+        PyAPI.PyGILState_Release(g)
+    end
 end
 
 @inline function WITH_GIL(f)

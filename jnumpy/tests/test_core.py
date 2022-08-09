@@ -1,4 +1,4 @@
-from .extension import jl_not, int_add, float_add, complex_mul_two, str_concat, tuple_return, mat_mul, set_zero, jl_fft
+from.extension import jl_not, int_add, float_add, complex_mul_two, str_concat, tuple_return, mat_mul, set_zero, jl_fft
 import numpy as np
 import pytest
 

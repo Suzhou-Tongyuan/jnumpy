@@ -145,8 +145,15 @@ Perform no cast but use the underlying type for coercions.
 """
 py_coerce(t, py::Py)
 
+function py_coerce(::Type{Bool}, py::Py)
+    py_equal_identity(py, PyAPI.Py_True) && return true
+    py_equal_identity(py, PyAPI.Py_False) && return false
+    py_seterror!(G_PyBuiltin.TypeError, "expected bool type")
+    py_throw()
+end
+
 function py_coerce(::Type{T}, py::Py)::T where T <: Integer
-    i = PyAPI.PyLong_AsLongLong(py)
+    i = PyAPI.PyLong_AsSsize_t(py)
     if i == -1 && PyAPI.PyErr_Occurred() != Py_NULLPTR
         py_throw()
     end
@@ -154,19 +161,19 @@ function py_coerce(::Type{T}, py::Py)::T where T <: Integer
 end
 
 function py_coerce(::Type{T}, py::Py)::T where T <: AbstractFloat
-    d = PyAPI.PyFloat_AsDouble(py)
-    if d == -1.0 && PyAPI.PyErr_Occurred() != Py_NULLPTR
+    if PyAPI.PyObject_IsInstance(py, PyAPI.PyFloat_Type) == 0
+        py_seterror!(G_PyBuiltin.TypeError, "expected float type")
         py_throw()
     end
-    convert(T, d)
+    py_cast(T, py)
 end
 
 function py_coerce(::Type{T}, py::Py)::T where T <: Complex
-    d = PyAPI.PyComplex_AsCComplex(py) :: Py_complex
-    if d.real == -1.0 && PyAPI.PyErr_Occurred() != Py_NULLPTR
+    if PyAPI.PyObject_IsInstance(py, PyAPI.PyComplex_Type) == 0
+        py_seterror!(G_PyBuiltin.TypeError, "expected complex type")
         py_throw()
     end
-    convert(T, complex(d.real, d.imag))
+    py_cast(T, py)
 end
 
 function py_coerce(::Type{T}, py::Py)::T where T <: AbstractString
@@ -178,7 +185,7 @@ end
 function py_coerce(::Type{TArray}, py::Py)::TArray where {TArray <: StridedArray}
     np = get_numpy()
     if PyAPI.PyObject_IsInstance(py, np.ndarray) == 0
-        py_seterror!(G_PyBuiltin.ValueError, "expected numpy array")
+        py_seterror!(G_PyBuiltin.TypeError, "expected numpy array")
         py_throw()
     end
     convert(TArray, from_ndarray(py))
@@ -194,8 +201,8 @@ end
     T isa DataType && :(error("$T is not a data type"))
     result = Expr(:tuple, [:($py_coerce($t, $unsafe_pytuple_get(py, $(i - 1)))) for (i, t) in enumerate(T.parameters)]...)
     quote
-        if $PyAPI.PyObject_IsInstance(py,  $PyAPI.PyTuple_Type) == 0
-            $PyAPI.PyErr_SetString($PyAPI.PyExc_TypeError[], "expected a tuple")
+        if $CPython.PyAPI.PyObject_IsInstance(py,  $CPython.PyAPI.PyTuple_Type) == 0
+            $CPython.PyAPI.PyErr_SetString($CPython.PyAPI.PyExc_TypeError[], "expected a tuple")
             $py_throw()
         end
         $result
@@ -206,16 +213,52 @@ function py_equal_identity(x::Union{Py, C.Ptr{PyObject}}, y::Union{Py, C.Ptr{PyO
     unsafe_unwrap(x) === unsafe_unwrap(y)
 end
 
+"""
+py_cast(t, py::Py)
+"""
+function py_cast(::Type{T}, py::Py)::T where T <: Integer
+    if PyAPI.PyNumber_Check(py) == 0
+        py_seterror!(G_PyBuiltin.TypeError, "expected number type")
+        py_throw()
+    end
+    intpy = Py(PyAPI.PyNumber_Long(py))
+    if intpy == Py_NULLPTR
+        py_throw()
+    end
+    py_coerce(T, intpy)
+end
+
+function py_cast(::Type{T}, py::Py)::T where T <: AbstractFloat
+    d = PyAPI.PyFloat_AsDouble(py)
+    if d == -1.0 && PyAPI.PyErr_Occurred() != Py_NULLPTR
+        py_throw()
+    end
+    convert(T, d)
+end
+
+function py_cast(::Type{T}, py::Py)::T where T <: Complex
+    d = PyAPI.PyComplex_AsCComplex(py) :: Py_complex
+    if d.real == -1.0 && PyAPI.PyErr_Occurred() != Py_NULLPTR
+        py_throw()
+    end
+    convert(T, complex(d.real, d.imag))
+end
+
+function py_cast(::Type{T}, py::Py)::T where T <: AbstractString
+    size_ref = Ref(0)
+    buf = PyAPI.PyUnicode_AsUTF8AndSize(py , size_ref)
+    return convert(T, Base.unsafe_string(buf, size_ref[]))
+end
+
 function py_cast(::Type{Bool}, o::Py)
     py_equal_identity(o, PyAPI.Py_True) && return true
     py_equal_identity(o, PyAPI.Py_False) && return false
     return PyAPI.PyObject_IsTrue(o) != 0
 end
 
-function py_cast(::Type{T}, o::Py) where T <: AbstractString
-    py_coerce(T, o)
-end
-
+"""
+py_cast(Py, o)
+"""
 function py_cast(::Type{Py}, o::Tuple)
     n = length(o)
     vec = Vector{Py}(undef, n)

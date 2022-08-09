@@ -1,7 +1,6 @@
-from jnumpy import init_jl, exec_julia, include_src
+from jnumpy import init_jl, init_project
 
 init_jl()
-include_src("core/basic.jl", __file__) # use a relative path
-exec_julia("basic.init()") # init module basic in core/basic.jl
+init_project(__file__)
 
-from basic import jl_int_add, jl_mat_mul
+from _basic import jl_int_add, jl_mat_mul

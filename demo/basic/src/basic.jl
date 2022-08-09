@@ -2,7 +2,6 @@ module basic
 
 using TyPython
 using TyPython.CPython
-CPython.init()
 
 @export_py function int_add(a::Int, b::Int)::Int
     return a + b
@@ -13,7 +12,7 @@ end
 end
 
 function init()
-    @export_pymodule basic begin
+    @export_pymodule _basic begin
         jl_int_add = Pyfunc(int_add)
         jl_mat_mul = Pyfunc(mat_mul)
     end

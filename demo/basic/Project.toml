@@ -1,2 +1,3 @@
+name = "basic"
+
 [deps]
-TyPython = "9c4566a2-237d-4c69-9a5e-9d27b7d0881b"

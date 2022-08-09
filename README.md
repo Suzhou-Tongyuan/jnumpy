@@ -10,18 +10,13 @@
 
 ### Quick Start
 
-1. add TyPython dependency
-```
-julia --project=. -e "import Pkg; Pkg.add(\"TyPython\")"
-```
+1. write and export julia functions in file `example.jl`
 
-2. write and export julia functions in file `example.jl`
 ```julia
 module example
 
 using TyPython
 using TyPython.CPython
-CPython.init()
 
 @export_py function mat_mul(a::StridedArray, b::StridedArray)::StridedArray
     return a * b
@@ -34,7 +29,8 @@ function init()
 end
 ```
 
-3. init and import julia function in python
+2. init and import julia function in python
+
 ```python
 from jnumpy import init_jl, exec_julia, include_src
 import jnumpy as np

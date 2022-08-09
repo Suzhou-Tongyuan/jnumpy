@@ -4,8 +4,6 @@ using TyPython
 using TyPython.CPython
 using MKL
 import FFTW
-TyPython.CPython.init()
-
 
 const FFT1D_PlanType = Base._return_type(FFTW.plan_fft, (StridedVector{ComplexF64}, Int))
 const plan1Ds = Dict{Tuple{DataType, NTuple{N, Int} where N}, FFT1D_PlanType}()
@@ -23,7 +21,7 @@ end
 
 
 function init()
-    @export_pymodule fast_fft begin
+    @export_pymodule _fast_fft begin
         jl_fft = Pyfunc(jl_fft)
     end
 end

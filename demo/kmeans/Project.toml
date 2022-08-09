@@ -1,4 +1,5 @@
+name = "fast_kmeans"
+
 [deps]
 MKL = "33e6dc65-8f57-5167-99aa-e5a354878fb2"
 ParallelKMeans = "42b8e9d4-006b-409a-8472-7f34b3fb58af"
-TyPython = "9c4566a2-237d-4c69-9a5e-9d27b7d0881b"

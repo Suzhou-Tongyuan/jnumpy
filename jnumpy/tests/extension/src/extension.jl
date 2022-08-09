@@ -3,7 +3,6 @@ module extension
 using TyPython
 using TyPython.CPython
 using FFTW
-CPython.init()
 
 @export_py function jl_not(a::Bool)::Bool
     return !a
@@ -44,7 +43,7 @@ end
 
 
 function init()
-    @export_pymodule extension begin
+    @export_pymodule _extension begin
         jl_not = Pyfunc(jl_not)
         int_add = Pyfunc(int_add)
         float_add = Pyfunc(float_add)
@@ -56,8 +55,5 @@ function init()
         jl_fft = Pyfunc(jl_fft)
     end
 end
-
-
-
 
 end

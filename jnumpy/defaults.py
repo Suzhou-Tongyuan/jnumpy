@@ -31,6 +31,8 @@ def get_default_julia_exe():
             serach_path = get_symlink_dir()
             print(serach_path)
             julia_exepath = shutil.which("julia", path=serach_path)
+            if not julia_exepath:
+                raise EnvironmentError("installed julia cannot be found!")
     return julia_exepath
 
 def get_project_args():
@@ -41,4 +43,4 @@ def setup_julia(version=None):
     print("installing julia with jill\n")
     install_dir = os.path.join(get_jnumpy_dir(), "julias")
     symlink_dir = get_symlink_dir()
-    install_julia(version=version, install_dir=install_dir, symlink_dir=symlink_dir, confirm=True)
+    install_julia(version=version, install_dir=install_dir, symlink_dir=symlink_dir, confirm=False)

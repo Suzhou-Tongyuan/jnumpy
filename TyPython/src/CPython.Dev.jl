@@ -2,6 +2,7 @@
 implementing necessary utilities to create CPython extensions.
 =#
 using TyPython.Reflection
+import TyPython
 import TyPython.Utils
 import MacroTools: @q
 export @export_py, @export_pymodule, Pyfunc
@@ -82,23 +83,23 @@ function export_py(__module__::Module, __source__::LineNumberNode, fi::FuncInfo)
             $__source__
             $__source__
             if argc != $nargs
-                $PyAPI.PyErr_SetString($PyAPI.PyExc_ValueError[], $_errormsg_argmismatch(argc, $nargs))
+                $CPython.PyAPI.PyErr_SetString($CPython.PyAPI.PyExc_ValueError[], $_errormsg_argmismatch(argc, $nargs))
                 return $Py_NULLPTR
             end
             $([:(local $(Symbol("arg", i)) = $Py($BorrowReference(), $unsafe_load(_vectorargs, $i))) for i = 1:nargs]...)
             __o = py_cast($Py, $(fi.name)($([:($py_coerce($(parTypes[i]), $(Symbol("arg", i)))) for i = 1:nargs]...)))
-            $PyAPI.Py_IncRef(__o)
+            $CPython.PyAPI.Py_IncRef(__o)
             return $unsafe_unwrap(__o)
         end
 
         Base.@noinline function $pyfname_except(e::Exception)
             if e isa $PyException
-                $PyAPI.PyErr_SetObject(e.type, e.value)
+                $CPython.PyAPI.PyErr_SetObject(e.type, e.value)
             else
                 msg = $Utils.capture_out() do
                     $Base.showerror(stderr, e, $catch_backtrace())
                 end
-                $PyAPI.PyErr_SetObject($CPython.G_PyBuiltin.RuntimeError, $py_cast($Py, msg))
+                $CPython.PyAPI.PyErr_SetObject($CPython.G_PyBuiltin.RuntimeError, $py_cast($Py, msg))
             end
             return $Py_NULLPTR
         end
@@ -113,7 +114,7 @@ function export_py(__module__::Module, __source__::LineNumberNode, fi::FuncInfo)
             end
         end
 
-        const $pyfptrname = $Base.@cfunction($(Expr(:$, pyfname)), $PyPtr, ($PyPtr, $(Ptr{C.Ptr{PyObject}}), $Py_ssize_t))
+
         const $pyfname_string_name = $(string(fi.name))
         const $pymethname = $Ref{$PyMethodDef}()
 
@@ -122,16 +123,17 @@ function export_py(__module__::Module, __source__::LineNumberNode, fi::FuncInfo)
         const $pyfuncobjectname_ = $(Ref{Ptr{Cvoid}})($C_NULL)
         const $pydocname = Ref{String}()
 
-        function TyPython.CPython.Pyfunc(::typeof($(fi.name)))
+        function $TyPython.CPython.Pyfunc(::typeof($(fi.name)))
             if $pyfuncobjectname_[] == $C_NULL
+                $pyfptrname = $Base.@cfunction($pyfname, $PyPtr, ($PyPtr, $(Ptr{C.Ptr{PyObject}}), $Py_ssize_t))
                 $pydocname[] = repr($Base.Docs.doc($(fi.name)))
                 $pymethname[] = $PyMethodDef(
                     $pointer($pyfname_string_name),
-                    $pyfptrname.ptr,
+                    $pyfptrname,
                     $METH_FASTCALL,
                     $Base.unsafe_convert($Cstring, $pydocname[])
                 )
-                $pyfuncobjectname[] = $Py($PyAPI.PyCFunction_NewEx($Base.unsafe_convert($(Ptr{Cvoid}), $pymethname), $C_NULL, $C_NULL))
+                $pyfuncobjectname[] = $Py($CPython.PyAPI.PyCFunction_NewEx($Base.unsafe_convert($(Ptr{Cvoid}), $pymethname), $C_NULL, $C_NULL))
                 $pyfuncobjectname_[] = $reinterpret($(Ptr{Cvoid}), $unsafe_unwrap($pyfuncobjectname[]))
             end
             return $pyfuncobjectname[]

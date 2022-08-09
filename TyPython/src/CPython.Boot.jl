@@ -44,7 +44,11 @@ function _atpyexit()
     return
 end
 
+const _init_indicator = Ref(C_NULL)
+
 function init(ptr :: Ptr{Cvoid})
+    _init_indicator[] != C_NULL && return
+
     init_api!(ptr)
     G_IsInitialized[] = true
     atexit() do
@@ -69,5 +73,7 @@ function init(ptr :: Ptr{Cvoid})
         if PyAPI.Py_AtExit(@cfunction(_atpyexit, Cvoid, ())) == -1
             @warn "Py_AtExit() error"
         end
+
+        _init_indicator[] = Ptr{Cvoid}(12312) # any non-zero number is fine
     end
 end
