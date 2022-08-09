@@ -35,7 +35,7 @@ println(unsafe_string(Base.JLOptions().image_file))
 println(dirname(Pkg.project().path))
 """.replace('\n', ';').replace('\r', ';')
 
-TyPython_dir = os.path.abspath("./TyPython")
+TyPython_dir = str(pathlib.Path(__file__).parent.absolute() / "TyPython")
 
 class JuliaProjectDict(typing_extensions.TypedDict):
     name: str

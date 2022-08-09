@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "julia-numpy"
-version = "0.1.1"
+version = "0.1.2"
 description = "Writing Python C extensions in Julia within 5 minutes."
 authors = ["thautwarm <twshere@outlook.com>"]
 maintainers = ["songjhaha <songjh96@foxmail.com>"]
