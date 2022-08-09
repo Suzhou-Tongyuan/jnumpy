@@ -234,7 +234,7 @@ def init_jl():
             import Pkg
             Pkg.activate({escape_string(default_project_dir)}, io=devnull)
             if !haskey(Pkg.project().dependencies, "TyPython")
-                Pkg.add("TyPython", io=devnull)
+                Pkg.develop(path={escape_string(TyPython_dir)})
             end
             Pkg.instantiate()
             import TyPython
