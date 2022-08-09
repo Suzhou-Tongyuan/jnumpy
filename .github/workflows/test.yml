@@ -55,7 +55,9 @@ jobs:
 
       - name: find python dll
         run: echo "TYPY_PY_DLL=$(python -m find_libpython)" >> $GITHUB_ENV
-
+  
+      - run: bash ./build.sh
+      
       - name: Setup Julia environment
         uses: julia-actions/setup-julia@v1
         with:
