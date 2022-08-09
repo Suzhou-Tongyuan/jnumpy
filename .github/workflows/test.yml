@@ -13,8 +13,6 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-env:
-  TYPY_JL_OPTS: --project=./jnumpy/tests/extension
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -68,9 +66,6 @@ jobs:
             ${{ runner.os }}-test-${{ env.cache-name }}-
             ${{ runner.os }}-test-
             ${{ runner.os }}-
-
-      - name: add TyPython
-        run: julia --project=./jnumpy/tests/extension -e "import Pkg;Pkg.develop(url=\"./TyPython\")"
 
       - name: run pytest
         run: python -m pytest ./jnumpy/tests/test_core.py
