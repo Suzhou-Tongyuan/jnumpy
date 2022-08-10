@@ -146,7 +146,8 @@ def init_project(package_entry_filepath: str):
 
 def is_initialized():
     try:
-        exec_julia(f"Pkg.instantiate(io=devnull)")
+        exec_julia(f'haskey(Pkg.project().dependencies, "TyPython") || Pkg.develop(path={escape_to_julia_rawstr(TyPython_directory)})')
+        exec_julia(f"Pkg.resolve(io=devnull)")
         return True
     except JuliaError:
         return False

@@ -36,8 +36,7 @@ println(dirname(Pkg.project().path))
 
 gil_template = r"""
 begin
-    import TyPython
-    using TyPython.CPython
+    CPython = TyPython.CPython
     try
         Base.@eval begin
             __PY_GIL = CPython.GIL_BEGIN()
@@ -63,8 +62,6 @@ end
 
 no_gil_template = r"""
 begin
-    import TyPython
-    using TyPython.CPython
     try
         {}
     catch e
