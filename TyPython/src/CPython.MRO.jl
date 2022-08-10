@@ -145,6 +145,14 @@ Perform no cast but use the underlying type for coercions.
 """
 py_coerce(t, py::Py)
 
+py_coerce(::Type{Py}, py::Py) = py
+
+function py_coerce(::Type{Nothing}, py::Py)
+    py_equal_identity(py, PyAPI.Py_None) && return nothing
+    py_seterror!(G_PyBuiltin.TypeError, "expected None")
+    py_throw()
+end
+
 function py_coerce(::Type{Bool}, py::Py)
     py_equal_identity(py, PyAPI.Py_True) && return true
     py_equal_identity(py, PyAPI.Py_False) && return false
@@ -214,8 +222,19 @@ function py_equal_identity(x::Union{Py, C.Ptr{PyObject}}, y::Union{Py, C.Ptr{PyO
 end
 
 """
-py_cast(t, py::Py)
+    py_cast(t, py::Py)
+cast python object to julia
 """
+function py_cast(::Type{Nothing}, py::Py)
+    py_coerce(Nothing, py)
+end
+
+function py_cast(::Type{Bool}, py::Py)
+    py_equal_identity(py, PyAPI.Py_True) && return true
+    py_equal_identity(py, PyAPI.Py_False) && return false
+    return PyAPI.PyObject_IsTrue(py) != 0
+end
+
 function py_cast(::Type{T}, py::Py)::T where T <: Integer
     if PyAPI.PyNumber_Check(py) == 0
         py_seterror!(G_PyBuiltin.TypeError, "expected number type")
@@ -245,19 +264,20 @@ function py_cast(::Type{T}, py::Py)::T where T <: Complex
 end
 
 function py_cast(::Type{T}, py::Py)::T where T <: AbstractString
-    size_ref = Ref(0)
-    buf = PyAPI.PyUnicode_AsUTF8AndSize(py , size_ref)
-    return convert(T, Base.unsafe_string(buf, size_ref[]))
+    py_coerce(T, py)
 end
 
-function py_cast(::Type{Bool}, o::Py)
-    py_equal_identity(o, PyAPI.Py_True) && return true
-    py_equal_identity(o, PyAPI.Py_False) && return false
-    return PyAPI.PyObject_IsTrue(o) != 0
+function py_cast(::Type{T}, py::Py)::T where T <: Tuple
+    py_coerce(T, py)
+end
+
+function py_cast(::Type{TArray}, py::Py)::TArray where {TArray <: StridedArray}
+    py_coerce(TArray, py)
 end
 
 """
-py_cast(Py, o)
+    py_cast(Py, o)
+cast julia variable to python object
 """
 function py_cast(::Type{Py}, o::Tuple)
     n = length(o)
