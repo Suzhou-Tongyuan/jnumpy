@@ -1,0 +1,3 @@
+import jnumpy as np
+
+def jl_kmeans(x: np.ndarray, n_clusters: int) -> tuple[np.ndarray, np.ndarray]: ...

@@ -32,12 +32,12 @@ end
     return a * b
 end
 
-@export_py function set_zero(a::StridedArray)::Nothing
+@export_py function set_zero(a::StridedVector)::Nothing
     a[1] = zero(eltype(a))
     return nothing
 end
 
-@export_py function jl_fft(x::StridedArray)::StridedArray
+@export_py function jl_fft(x::StridedVector)::StridedVector{ComplexF64}
     return FFTW.fft(x)
 end
 
