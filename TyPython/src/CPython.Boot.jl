@@ -72,6 +72,5 @@ function init(ptr :: Ptr{Cvoid})
         if PyAPI.Py_AtExit(@cfunction(_atpyexit, Cvoid, ())) == -1
             @warn "Py_AtExit() error"
         end
-        RT_set_configuration!() # any non-zero number is fine
     end
 end
