@@ -34,10 +34,11 @@ def get_default_julia_exe() -> str:
     # search julia in sys path
     julia_exepath = shutil.which("julia")
     julia_exepath = check_valid_julia_exe(julia_exepath)
-    # search julia in default jnumpy path
-    serach_path = get_symlink_dir()
-    julia_exepath = shutil.which("julia", path=serach_path)
-    julia_exepath = check_valid_julia_exe(julia_exepath)
+    if not julia_exepath:
+        # search julia in default jnumpy path
+        serach_path = get_symlink_dir()
+        julia_exepath = shutil.which("julia", path=serach_path)
+        julia_exepath = check_valid_julia_exe(julia_exepath)
 
     if not julia_exepath:
         quest = "Can not find julia.\nWould you like jnumpy to install julia now?"
