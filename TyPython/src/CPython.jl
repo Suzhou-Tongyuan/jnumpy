@@ -69,7 +69,7 @@ end
 include("CPython.Defs.jl")
 include("CPython.APIs.jl")
 include("CPython.Boot.jl")
-include("CPython.MRO.jl")
+include("CPython.ORM.jl")
 
 const G_ATTR_SYM_MAP = Dict{Symbol, Py}()
 const G_OB_POOL = Any[]
