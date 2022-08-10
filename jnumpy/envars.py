@@ -1,3 +1,4 @@
+from __future__ import annotations
 import pathlib
 
 CF_TYPY_MODE = "TYPY_MODE"
