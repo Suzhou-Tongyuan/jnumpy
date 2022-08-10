@@ -14,7 +14,42 @@ const CF_TYPY_PY_DLL = "TYPY_PY_DLL"
 const CF_TYPY_MODE_PYTHON = "PYTHON-BASED"
 const CF_TYPY_MODE_JULIA = "JULIA-BASED"
 
-function is_calling_julia_from_python()
+mutable struct Configuration
+    IS_DEAD::Bool
+    INIT_INDICATOR::Ptr{Cvoid}
+    IS_TYPY_MODE_PYTHON::Bool
+
+    function Configuration()
+        this = new()
+        this.IS_DEAD = false
+        return this
+    end
+end
+
+
+const RT_CONFIG = Configuration()
+
+
+"""
+should not be used before calling `CPython.init()`
+"""
+function RT_is_initialized()
+    RT_CONFIG.INIT_INDICATOR != C_NULL
+end
+
+function RT_set_dead!()
+    RT_CONFIG.IS_DEAD = true
+    RT_CONFIG.INIT_INDICATOR = C_NULL
+end
+
+function RT_set_configuration!()
+    RT_CONFIG.IS_DEAD && return
+    RT_CONFIG.INIT_INDICATOR = Ptr{Cvoid}(12321)
+    RT_CONFIG.IS_TYPY_MODE_PYTHON = RT_READ_IS_TYPE_MODE_PYTHON()
+    return
+end
+
+function RT_READ_IS_TYPE_MODE_PYTHON()
     result = get!(ENV, CF_TYPY_MODE) do
         CF_TYPY_MODE_JULIA
     end
@@ -22,6 +57,13 @@ function is_calling_julia_from_python()
         return true
     end
     return false
+end
+
+function is_calling_julia_from_python()
+    if !RT_is_initialized()
+        RT_set_configuration!()
+    end
+    return RT_CONFIG.IS_TYPY_MODE_PYTHON
 end
 
 include("CPython.Defs.jl")
@@ -47,7 +89,6 @@ include("CPython.Dev.jl")
 
 
 function __init__()
-    G_IsInitialized[] = false
     empty!(G_OB_POOL)
     empty!(G_ATTR_SYM_MAP)
     __init_numpy__()
