@@ -84,7 +84,10 @@ def args_from_config(exepath: str, args: list):
 
 def exec_julia(x, use_gil: bool = True):
     global _eval_jl
-    _eval_jl(x, use_gil)  # type: ignore
+    try:
+        _eval_jl(x, use_gil)  # type: ignore
+    except NameError:
+        raise RuntimeError("name '_eval_jl' is not defined, should call init_jl() first")
 
 
 class JuliaError(Exception):
