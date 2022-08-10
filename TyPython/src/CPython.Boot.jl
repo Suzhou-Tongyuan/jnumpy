@@ -51,9 +51,9 @@ function init(ptr :: Ptr{Cvoid})
     init_api!(ptr)
     RT_set_configuration!()
     atexit() do
+        RT_set_dead!()
         if RT_is_initialized()
             WITH_GIL() do
-                RT_set_dead!()
                 PyAPI.Py_FinalizeEx()
             end
         end
@@ -72,6 +72,5 @@ function init(ptr :: Ptr{Cvoid})
         if PyAPI.Py_AtExit(@cfunction(_atpyexit, Cvoid, ())) == -1
             @warn "Py_AtExit() error"
         end
-        RT_set_configuration!() # any non-zero number is fine
     end
 end

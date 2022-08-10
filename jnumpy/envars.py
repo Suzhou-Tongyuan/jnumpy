@@ -1,3 +1,4 @@
+from __future__ import annotations
 import pathlib
 
 CF_TYPY_MODE = "TYPY_MODE"
@@ -12,3 +13,17 @@ CF_JNUMPY_HOME = "JNUMPY_HOME"
 TyPython_directory = (
     pathlib.Path(__file__).parent.absolute().joinpath("TyPython").as_posix()
 )
+
+
+InitTools_path = (
+    pathlib.Path(__file__)
+    .parent.absolute()
+    .joinpath("TyPython", "src", "InitTools.jl")
+    .as_posix()
+)
+
+
+class SessionCtx:
+    JULIA_EXE: str
+    DEFAULT_PROJECT_DIR: str
+    JULIA_START_OPTIONS: list[str]

@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 import subprocess
 import shutil
@@ -15,11 +16,18 @@ def get_symlink_dir():
     return os.path.join(get_jnumpy_dir(), "bin")
 
 
-def get_julia_exe():
+def setup_julia_exe_():
+    try:
+        envars.SessionCtx.JULIA_EXE
+        return
+    except AttributeError:
+        pass
     julia_exepath = os.getenv("TYPY_JL_EXE")
     if not julia_exepath:
         julia_exepath = get_default_julia_exe()
-    return julia_exepath
+    envars.SessionCtx.JULIA_EXE = julia_exepath
+    return
+
 
 def check_valid_julia_exe(julia_exepath):
     if julia_exepath:
@@ -29,6 +37,7 @@ def check_valid_julia_exe(julia_exepath):
         except subprocess.CalledProcessError:
             return None
     return julia_exepath
+
 
 def get_default_julia_exe() -> str:
     # search julia in sys path
