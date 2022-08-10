@@ -1,11 +1,10 @@
 from __future__ import annotations
-from jnumpy.envars import TyPython_directory, InitTools_path, SessionCtx
+from jnumpy.envars import TyPython_directory, SessionCtx
 from jnumpy.utils import escape_to_julia_rawstr, invoke_interpreted_julia
 from jnumpy.init import JuliaError, exec_julia
 import contextlib
+import subprocess
 import pathlib
-import os
-import io
 
 
 def include_src(src_file: str, current_file_path: str = "./__init__.py"):
@@ -37,9 +36,13 @@ def load_project(package_entry_filepath: str = "./__init__.py"):
     py_package_rootdir = (
         pathlib.Path(package_entry_filepath).absolute().parent.as_posix()
     )
-    jl_module_name = get_project_name_checked(py_package_rootdir)
     with activate_project(py_package_rootdir):
-        exec_julia("import {0}".format(jl_module_name), use_gil=False)
+        jl_module_name = get_project_name_checked(py_package_rootdir)
+        try:
+            exec_julia("import {0}".format(jl_module_name), use_gil=False)
+        except JuliaError:
+            exec_julia("InitTools.force_resolve()", use_gil=False)
+            exec_julia("import {0}".format(jl_module_name), use_gil=False)
 
     return
 
@@ -47,7 +50,7 @@ def load_project(package_entry_filepath: str = "./__init__.py"):
 @contextlib.contextmanager
 def activate_project(project_dir: str):
     exec_julia(
-        f"TyPython.InitTools.activate_project({escape_to_julia_rawstr(project_dir)},"
+        f"InitTools.activate_project({escape_to_julia_rawstr(project_dir)},"
         f"{escape_to_julia_rawstr(TyPython_directory)})",
         use_gil=False,
     )
@@ -55,7 +58,7 @@ def activate_project(project_dir: str):
         yield
     finally:
         exec_julia(
-            f"TyPython.InitTools.activate_project({escape_to_julia_rawstr(SessionCtx.DEFAULT_PROJECT_DIR)},"
+            f"InitTools.activate_project({escape_to_julia_rawstr(SessionCtx.DEFAULT_PROJECT_DIR)},"
             f"{escape_to_julia_rawstr(TyPython_directory)})",
             use_gil=False,
         )
@@ -63,17 +66,22 @@ def activate_project(project_dir: str):
 
 def get_project_name_no_exc(project_dir: str):
     """!!!This function can return empty string!"""
-    with contextlib.redirect_stdout(io.StringIO()) as f:
-        invoke_interpreted_julia(
+    try:
+        name = invoke_interpreted_julia(
             SessionCtx.JULIA_EXE,
             [
                 "-e",
-                f"include({escape_to_julia_rawstr(InitTools_path)});"
-                f"InitTools.print_project_name({escape_to_julia_rawstr(project_dir)})",
+                rf'import TOML; TOML.parsefile(joinpath({escape_to_julia_rawstr(project_dir)}, "Project.toml"))["name"] |> println',
             ],
         )
-        jl_module_name = f.getvalue()
-    return jl_module_name
+    except subprocess.CalledProcessError:
+        raise RuntimeError(
+            f"{project_dir} does not have a Project.toml with a top-level"
+            f"entry 'name = xxx' and the '[deps]' section."
+        )
+    if isinstance(name, bytes):
+        jl_module_name = name.decode("utf-8").strip()
+        return jl_module_name
 
 
 def get_project_name_checked(project_dir: str):
@@ -83,21 +91,16 @@ def get_project_name_checked(project_dir: str):
     return jl_module_name
 
 
-def init_project(project_dir):
-    invoke_interpreted_julia(
-        SessionCtx.JULIA_EXE,
-        [
-            "-e",
-            (
-                f"include({escape_to_julia_rawstr(InitTools_path)});"
-                f"InitTools.activate_project({escape_to_julia_rawstr(project_dir)})"
-            ),
-        ],
-    )
-
-    jl_module_name = get_project_name_checked(project_dir)
-
+def init_project(package_entry_filepath):
+    project_dir = pathlib.Path(package_entry_filepath).absolute().parent.as_posix()
     with activate_project(project_dir):
-        exec_julia(
-            "import {0};TyPython.CPython.init();{0}.init()".format(jl_module_name)
-        )
+        jl_module_name = get_project_name_checked(project_dir)
+        try:
+            exec_julia(
+                "import {0};TyPython.CPython.init();{0}.init()".format(jl_module_name)
+            )
+        except JuliaError:
+            exec_julia("InitTools.force_resolve()", use_gil=False)
+            exec_julia(
+                "import {0};TyPython.CPython.init();{0}.init()".format(jl_module_name)
+            )

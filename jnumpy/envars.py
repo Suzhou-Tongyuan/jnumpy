@@ -14,7 +14,7 @@ TyPython_directory = (
 )
 
 
-InitTools_path = TyPython_directory = (
+InitTools_path = (
     pathlib.Path(__file__)
     .parent.absolute()
     .joinpath("TyPython", "src", "InitTools.jl")
@@ -25,3 +25,4 @@ InitTools_path = TyPython_directory = (
 class SessionCtx:
     JULIA_EXE: str
     DEFAULT_PROJECT_DIR: str
+    JULIA_START_OPTIONS: list[str]

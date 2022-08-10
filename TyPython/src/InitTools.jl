@@ -3,7 +3,7 @@ module InitTools
 import Pkg
 import UUIDs
 
-function check_if_typython_installed(typython_path::AbstractString)
+function check_if_typython_installed(typython_dir::AbstractString)
     VERSION >= v"1.9" && error("Support for Julia 1.9 is coming soon.")
     VERSION < v"1.7" && error("TyPython works for Julia >= 1.7!")
     CTX = Pkg.API.Context()
@@ -13,36 +13,32 @@ function check_if_typython_installed(typython_path::AbstractString)
     end
     pkgentry = CTX.env.manifest.deps[uuid_TyPython]::Pkg.Types.PackageEntry
     isnothing(pkgentry.path) && return false
-    return abspath(typython_path) == abspath(joinpath(dirname(CTX.env.project_file), pkgentry.path))
+    return abspath(typython_dir) == abspath(joinpath(dirname(CTX.env.project_file), pkgentry.path))
 end
 
-function _develop_typython(typython_path::AbstractString)
-    typython_path = abspath(typython_path)
-    Pkg.develop(path=typython_path)
+function _develop_typython(typython_dir::AbstractString)
+    typython_dir = abspath(typython_dir)
+    Pkg.develop(path=typython_dir)
     nothing
 end
 
-function setup_environment(typython_path::AbstractString)
-    if !check_if_typython_installed(typython_path)
-        _develop_typython(typython_path)
+function setup_environment(typython_dir::AbstractString)
+    if !check_if_typython_installed(typython_dir)
+        _develop_typython(typython_dir)
         Pkg.resolve()
         Pkg.instantiate()
     end
     nothing
 end
 
-function activate_project(project_dir::AbstractString, typython_path::AbstractString)
-    Pkg.activate(project_path)
-    setup_environment(typython_path)
+function force_resolve()
+    Pkg.resolve()
     nothing
 end
 
-function print_project_name(project_dir::AbstractString)
-    Pkg.activate(project_path, io=devnull)
-    n = Pkg.project().name
-    if !isnothing(n)
-        println(n)
-    end
+function activate_project(project_dir::AbstractString, typython_dir::AbstractString)
+    Pkg.activate(project_dir, io=devnull)
+    setup_environment(typython_dir)
     nothing
 end
 

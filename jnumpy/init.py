@@ -5,7 +5,7 @@ import subprocess
 import ctypes
 import shlex
 import contextlib
-from .utils import escape_to_julia_rawstr, invoke_interpreted_julia
+from .utils import escape_to_julia_rawstr
 from .defaults import setup_julia_exe_, get_project_args
 from .envars import (
     CF_TYPY_JL_OPTS,
@@ -38,23 +38,22 @@ println(dirname(Pkg.project().path))
 
 gil_template = r"""
 begin
-    CPython = TyPython.CPython
     try
         Base.@eval begin
-            __PY_GIL = CPython.GIL_BEGIN()
+            __PY_GIL = TyPython.CPython.GIL_BEGIN()
             try
                 {}
             finally
-                CPython.GIL_END(__PY_GIL)
+                TyPython.CPython.GIL_END(__PY_GIL)
             end
         end
     catch e
-        CPython.WITH_GIL() do
-            errmsg = CPython.Utils.capture_out() do
+        TyPython.CPython.WITH_GIL() do
+            errmsg = TyPython.CPython.Utils.capture_out() do
                 Base.showerror(stderr, e, catch_backtrace())
             end
-            sys = CPython.py_import("sys")
-            err_o = CPython.py_cast(CPython.Py, errmsg)
+            sys = TyPython.CPython.py_import("sys")
+            err_o = TyPython.CPython.py_cast(TyPython.CPython.Py, errmsg)
             sys.stderr.write(err_o)
             rethrow()
         end
@@ -89,7 +88,9 @@ def exec_julia(x, use_gil: bool = True):
     try:
         _eval_jl(x, use_gil)  # type: ignore
     except NameError:
-        raise RuntimeError("name '_eval_jl' is not defined, should call init_jl() first")
+        raise RuntimeError(
+            "name '_eval_jl' is not defined, should call init_jl() first"
+        )
 
 
 class JuliaError(Exception):
@@ -126,7 +127,7 @@ def init_jl():
     bindir, libpath, sysimage, default_project_dir = subprocess.run(
         cmd, check=True, capture_output=True, encoding="utf8"
     ).stdout.splitlines()
-
+    SessionCtx.JULIA_START_OPTIONS = [jl_opts_proj, *jl_opts]
     SessionCtx.DEFAULT_PROJECT_DIR = default_project_dir
 
     old_cwd = os.getcwd()
@@ -148,26 +149,21 @@ def init_jl():
         lib.jl_eval_string.restype = ctypes.c_void_p
         lib.jl_exception_clear.restype = None
 
-        invoke_interpreted_julia(
-            SessionCtx.JULIA_EXE,
-            [
-                "-e",
-                (
-                    f"include({escape_to_julia_rawstr(InitTools_path)});"
-                    f"InitTools.activate_project({escape_to_julia_rawstr(SessionCtx.DEFAULT_PROJECT_DIR)})"
-                ),
-            ],
-        )
-
         if not lib.jl_eval_string(
             rf"""
         try
+            include({escape_to_julia_rawstr(InitTools_path)})
+            InitTools.activate_project({escape_to_julia_rawstr(SessionCtx.DEFAULT_PROJECT_DIR)}, {escape_to_julia_rawstr(TyPython_directory)})
+            try
+                import TyPython
+            catch
+                InitTools.force_resolve()
+            end
             import Pkg
-            Pkg.activate({escape_to_julia_rawstr(SessionCtx.DEFAULT_PROJECT_DIR)}, io=devnull)
             import TyPython
             import TyPython.CPython
-            import TyPython.InitTools
             TyPython.CPython.init()
+            push!(LOAD_PATH, {escape_to_julia_rawstr(SessionCtx.DEFAULT_PROJECT_DIR)})
         catch err
             showerror(stdout, err, catch_backtrace())
             rethrow()
