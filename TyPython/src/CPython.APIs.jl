@@ -13,7 +13,7 @@ mutable struct Py
     function Py(::UnsafeNew, ptr::C.Ptr{PyObject}=Py_NULLPTR)
         self = new(ptr)
         finalizer(self) do x
-            if G_IsInitialized[]
+            if RT_is_initialized()
                 WITH_GIL(GILNoRaise()) do
                     PyAPI.Py_DecRef(x)
                 end
@@ -168,7 +168,7 @@ end
 ```
 """
 @inline function WITH_GIL(f, ::GILNoRaise)
-    if is_calling_julia_from_python() && G_IsInitialized[]
+    if is_calling_julia_from_python() && RT_is_initialized()
         g = PyAPI.PyGILState_Ensure()
         r = f()
         PyAPI.PyGILState_Release(g)
@@ -178,19 +178,19 @@ end
 end
 
 @inline function GIL_BEGIN()
-    if is_calling_julia_from_python() && G_IsInitialized[]
+    if is_calling_julia_from_python() && RT_is_initialized()
         return g = PyAPI.PyGILState_Ensure()
     end
 end
 
 @inline function GIL_END(g)
-    if is_calling_julia_from_python() && G_IsInitialized[]
+    if is_calling_julia_from_python() && RT_is_initialized()
         PyAPI.PyGILState_Release(g)
     end
 end
 
 @inline function WITH_GIL(f)
-    if is_calling_julia_from_python() && G_IsInitialized[]
+    if is_calling_julia_from_python() && RT_is_initialized()
         g = PyAPI.PyGILState_Ensure()
         try
             return f()
@@ -265,7 +265,7 @@ function py_isnull(x::C.Ptr{PyObject})
 end
 
 @noinline function py_throw()
-    if !(G_IsInitialized[])
+    if !RT_is_initialized()
         msg = capture_out() do
             PyAPI.PyErr_Print()
             PyAPI.PyErr_Clear()

@@ -22,7 +22,7 @@ function load_pydll!(dllpath::AbstractString)
 end
 
 function init()
-    G_IsInitialized[] && return
+    RT_is_initialized() && return
     if haskey(ENV, CF_TYPY_PY_APIPTR)
         ptr = reinterpret(Ptr{Cvoid}, parse(UInt, ENV[CF_TYPY_PY_APIPTR]))
         init(ptr)
@@ -40,21 +40,20 @@ function init()
 end
 
 function _atpyexit()
-    G_IsInitialized[] = false
+    RT_set_dead!()
     return
 end
 
-const _init_indicator = Ref(C_NULL)
 
 function init(ptr :: Ptr{Cvoid})
-    _init_indicator[] != C_NULL && return
+    RT_is_initialized() && return
 
     init_api!(ptr)
-    G_IsInitialized[] = true
+    RT_set_configuration!()
     atexit() do
-        if G_IsInitialized[]
+        if RT_is_initialized()
             WITH_GIL() do
-                G_IsInitialized[] = false
+                RT_set_dead!()
                 PyAPI.Py_FinalizeEx()
             end
         end
@@ -73,7 +72,6 @@ function init(ptr :: Ptr{Cvoid})
         if PyAPI.Py_AtExit(@cfunction(_atpyexit, Cvoid, ())) == -1
             @warn "Py_AtExit() error"
         end
-
-        _init_indicator[] = Ptr{Cvoid}(12312) # any non-zero number is fine
+        RT_set_configuration!() # any non-zero number is fine
     end
 end
