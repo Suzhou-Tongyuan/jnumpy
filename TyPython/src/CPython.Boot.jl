@@ -51,9 +51,9 @@ function init(ptr :: Ptr{Cvoid})
     init_api!(ptr)
     RT_set_configuration!()
     atexit() do
+        RT_set_dead!()
         if RT_is_initialized()
             WITH_GIL() do
-                RT_set_dead!()
                 PyAPI.Py_FinalizeEx()
             end
         end
