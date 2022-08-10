@@ -31,8 +31,16 @@ function setup_environment(typython_dir::AbstractString)
     nothing
 end
 
+
+"""
+The precompiled file goes wrong for unknown reason.
+Removing and re-adding works.
+"""
 function force_resolve()
+    Pkg.rm("TyPython", io=devnull)
+    Pkg.add("TyPython", io=devnull)
     Pkg.resolve()
+    Pkg.instantiate()
     nothing
 end
 

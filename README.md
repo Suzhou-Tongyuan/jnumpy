@@ -12,7 +12,9 @@ You can install the Python package `jnumpy` with the following command:
 
 Note that JNumPy will install julia in `JNUMPY_HOME` for you, if there is no Julia installation available.
 
-1. write and export julia functions in file `example.jl`
+## Usage
+
+1. create a Python package `example`, write and export julia functions in the file `example/src/example.jl`
 
     ```julia
     module example
@@ -25,26 +27,53 @@ Note that JNumPy will install julia in `JNUMPY_HOME` for you, if there is no Jul
     end
 
     function init()
-        @export_pymodule example begin
-            jl_mat_mul = Pyfunc(jl_mat_mul)
+        @export_pymodule _example begin
+            jl_mat_mul = Pyfunc(mat_mul)
         end
     end
 
     end
     ```
 
+2. create `example/Project.toml` as follows:
 
-2. initialize and import the julia functions in Python
+    ```toml
+    name = "example"  # this is required to find the julia's entry module
+
+    [deps]
+    # specify your julia dependencies here
+    ```
+
+3. initialize and import the julia functions at `example/__init__.py`:
 
     ```python
-    from jnumpy import init_jl, exec_julia, include_src
     import jnumpy as np
-    init_jl()
-    include_src("example.jl", __file__)
-    exec_julia("example.init()")
+    np.init_jl()
+    np.init_project(__file__)
 
+    from _example import jl_mat_mul
+
+    __all__ = ['jl_mat_mul']
+    ```
+
+4. enjoy your Python extension package:
+
+
+    This is the structure of your Python extension package:
+
+    ```bash
+    > ls -R
+    example/:
+        __init__.py  Project.toml  src
+
+    example/src:
+        example.jl
+    ```
+
+    This is how you use it:
+
+    ```python
     from example import jl_mat_mul
-
     x = np.array([[1,2],[3,4]])
     y = np.array([[4,3],[2,1]])
     jl_mat_mul(x, y)

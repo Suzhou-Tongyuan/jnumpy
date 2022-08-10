@@ -163,7 +163,6 @@ def init_jl():
             import TyPython
             import TyPython.CPython
             TyPython.CPython.init()
-            push!(LOAD_PATH, {escape_to_julia_rawstr(SessionCtx.DEFAULT_PROJECT_DIR)})
         catch err
             showerror(stdout, err, catch_backtrace())
             rethrow()
