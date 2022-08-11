@@ -36,7 +36,7 @@ def activate_project_nocheck(project_dir: str):
     finally:
         exec_julia(
             f"InitTools.activate_project({escape_to_julia_rawstr(SessionCtx.DEFAULT_PROJECT_DIR)},"
-            f"{escape_to_julia_rawstr(TyPython_directory)}, check=false)",
+            f"{escape_to_julia_rawstr(TyPython_directory)}; check=false)",
             use_gil=False,
         )
 
@@ -96,6 +96,7 @@ def init_project(package_entry_filepath):
     except JuliaError:
         with activate_project_checked(project_dir):
             jl_module_name = get_project_name_checked(project_dir)
+            exec_julia(f"InitTools.force_resolve({escape_to_julia_rawstr(TyPython_directory)})", use_gil=True)
             exec_julia(
                 "import {0};TyPython.CPython.init();{0}.init()".format(jl_module_name)
             )
