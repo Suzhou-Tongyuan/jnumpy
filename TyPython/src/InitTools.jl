@@ -38,7 +38,7 @@ Removing and re-adding works.
 """
 function force_resolve(typython_dir::AbstractString)
     Pkg.rm("TyPython", io=devnull)
-    Pkg.develope(path=typython_dir, io=devnull)
+    Pkg.develop(path=typython_dir, io=devnull)
     Pkg.resolve()
     Pkg.instantiate()
     nothing
