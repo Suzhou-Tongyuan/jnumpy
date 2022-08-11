@@ -36,9 +36,9 @@ end
 The precompiled file goes wrong for unknown reason.
 Removing and re-adding works.
 """
-function force_resolve()
+function force_resolve(typython_dir::AbstractString)
     Pkg.rm("TyPython", io=devnull)
-    Pkg.add("TyPython", io=devnull)
+    Pkg.develope(path=typython_dir, io=devnull)
     Pkg.resolve()
     Pkg.instantiate()
     nothing
