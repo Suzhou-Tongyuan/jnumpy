@@ -52,7 +52,7 @@ function init(ptr :: Ptr{Cvoid})
     RT_set_configuration!()
     atexit() do
         RT_set_dead!()
-        if RT_is_initialized()
+        if RT_is_initialized() && PyAPI.Py_IsInitialized() != 0
             WITH_GIL() do
                 PyAPI.Py_FinalizeEx()
             end
