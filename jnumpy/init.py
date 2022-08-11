@@ -63,11 +63,7 @@ end
 
 no_gil_template = r"""
 begin
-    try
-        {}
-    catch e
-        showerror(stdout, e, catch_backtrace())
-    end
+    {}
 end
 """
 
@@ -174,15 +170,17 @@ def init_jl():
         try:
             exec_julia("import TyPython", use_gil=False)
         except JuliaError:
-            exec_julia(
-                f"InitTools.setup_environment({escape_to_julia_rawstr(TyPython_directory)})",
-                use_gil=True,
-            )
+            try:
+                exec_julia(
+                    f"InitTools.setup_environment({escape_to_julia_rawstr(TyPython_directory)})",
+                    use_gil=True,
+                )
+            except JuliaError:
+                pass
             exec_julia(
                 f"InitTools.force_resolve({escape_to_julia_rawstr(TyPython_directory)})",
                 use_gil=False,
             )
-
         try:
             exec_julia(
                 rf"""
