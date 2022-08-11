@@ -5,7 +5,6 @@ from jnumpy.init import JuliaError, exec_julia
 import contextlib
 import subprocess
 import pathlib
-import time
 
 
 def include_src(src_file: str, current_file_path: str = "./__init__.py"):
@@ -27,12 +26,10 @@ def include_src(src_file: str, current_file_path: str = "./__init__.py"):
 
 @contextlib.contextmanager
 def activate_project_nocheck(project_dir: str):
-    S0 = time.time()
     exec_julia(
         f"Pkg.activate({escape_to_julia_rawstr(project_dir)}, io=devnull)",
         use_gil=False,
     )
-    print(time.time() - S0)
     try:
         yield
     finally:
