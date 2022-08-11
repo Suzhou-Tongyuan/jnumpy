@@ -157,7 +157,7 @@ def init_jl():
             try
                 import TyPython
             catch
-                InitTools.force_resolve()
+                InitTools.force_resolve({escape_to_julia_rawstr(TyPython_directory)})
             end
             import Pkg
             import TyPython

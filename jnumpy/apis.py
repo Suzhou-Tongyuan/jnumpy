@@ -41,7 +41,7 @@ def load_project(package_entry_filepath: str = "./__init__.py"):
         try:
             exec_julia("import {0}".format(jl_module_name), use_gil=False)
         except JuliaError:
-            exec_julia("InitTools.force_resolve()", use_gil=False)
+            exec_julia("InitTools.force_resolve({escape_to_julia_rawstr(TyPython_directory)})", use_gil=False)
             exec_julia("import {0}".format(jl_module_name), use_gil=False)
 
     return
@@ -100,7 +100,7 @@ def init_project(package_entry_filepath):
                 "import {0};TyPython.CPython.init();{0}.init()".format(jl_module_name)
             )
         except JuliaError:
-            exec_julia("InitTools.force_resolve()", use_gil=False)
+            exec_julia("InitTools.force_resolve({escape_to_julia_rawstr(TyPython_directory)})", use_gil=False)
             exec_julia(
                 "import {0};TyPython.CPython.init();{0}.init()".format(jl_module_name)
             )
