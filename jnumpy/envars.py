@@ -16,10 +16,7 @@ TyPython_directory = (
 
 
 InitTools_path = (
-    pathlib.Path(__file__)
-    .parent.absolute()
-    .joinpath("InitTools.jl")
-    .as_posix()
+    pathlib.Path(__file__).parent.absolute().joinpath("InitTools.jl").as_posix()
 )
 
 

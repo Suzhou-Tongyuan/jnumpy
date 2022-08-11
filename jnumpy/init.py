@@ -66,7 +66,7 @@ begin
     try
         {}
     catch e
-        showerror(stderr, e, catch_backtrace())
+        showerror(stdout, e, catch_backtrace())
     end
 end
 """
@@ -111,7 +111,6 @@ def init_jl():
         raise Exception("Unknown mode: " + (os.getenv(CF_TYPY_MODE) or "<unset>"))
 
     setup_julia_exe_()
-
     jl_opts = shlex.split(os.getenv(CF_TYPY_JL_OPTS, ""))
     jl_opts_proj = get_project_args()
     cmd = [
@@ -149,31 +148,6 @@ def init_jl():
         lib.jl_eval_string.restype = ctypes.c_void_p
         lib.jl_exception_clear.restype = None
 
-        if not lib.jl_eval_string(
-            rf"""
-        try
-            include({escape_to_julia_rawstr(InitTools_path)})
-            InitTools.activate_project({escape_to_julia_rawstr(SessionCtx.DEFAULT_PROJECT_DIR)}, {escape_to_julia_rawstr(TyPython_directory)})
-            try
-                import TyPython
-            catch
-                InitTools.force_resolve({escape_to_julia_rawstr(TyPython_directory)})
-            end
-            import Pkg
-            import TyPython
-            import TyPython.CPython
-            TyPython.CPython.init()
-        catch err
-            showerror(stdout, err, catch_backtrace())
-            rethrow()
-        end
-        """.encode(
-                "utf8"
-            )
-        ):
-            lib.jl_exception_clear()
-            raise RuntimeError("invalid julia initialization")
-
         def _eval_jl(x: str, use_gil: bool):
             with contextlib.redirect_stderr(io.StringIO()) as ef:
                 if use_gil:
@@ -187,6 +161,36 @@ def init_jl():
                     lib.jl_exception_clear()
                     raise JuliaError(ef.getvalue())
                 return None
+
+        exec_julia(
+            f"""
+            import Pkg
+            Pkg.activate({escape_to_julia_rawstr(default_project_dir)}, io=devnull)
+            include({escape_to_julia_rawstr(InitTools_path)})
+        """,
+            use_gil=False,
+        )
+
+        try:
+            exec_julia("import TyPython", use_gil=False)
+        except JuliaError:
+            exec_julia(
+                f"InitTools.force_resolve({escape_to_julia_rawstr(TyPython_directory)})",
+                use_gil=False,
+            )
+
+        try:
+            exec_julia(
+                rf"""
+                import Pkg
+                import TyPython
+                import TyPython.CPython
+                TyPython.CPython.init()
+            """,
+                use_gil=False,
+            )
+        except JuliaError:
+            raise RuntimeError("invalid julia initialization")
 
     finally:
         os.chdir(old_cwd)
