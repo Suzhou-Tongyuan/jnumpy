@@ -22,6 +22,7 @@ mutable struct Configuration
     function Configuration()
         this = new()
         this.IS_DEAD = false
+        this.INIT_INDICATOR = C_NULL  # 1.7
         return this
     end
 end
