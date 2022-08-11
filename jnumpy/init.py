@@ -175,6 +175,10 @@ def init_jl():
             exec_julia("import TyPython", use_gil=False)
         except JuliaError:
             exec_julia(
+                f"InitTools.setup_environment({escape_to_julia_rawstr(TyPython_directory)})",
+                use_gil=True,
+            )
+            exec_julia(
                 f"InitTools.force_resolve({escape_to_julia_rawstr(TyPython_directory)})",
                 use_gil=False,
             )
