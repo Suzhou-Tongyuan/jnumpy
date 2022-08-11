@@ -38,10 +38,10 @@ Removing and re-adding works.
 """
 function force_resolve(typython_dir::AbstractString)
     try
-        Pkg.rm("TyPython", io=devnull)
+        Pkg.rm("TyPython")
     catch
     end
-    Pkg.develop(path=typython_dir, io=devnull)
+    _develop_typython(typython_dir)
     Pkg.resolve()
     Pkg.instantiate()
     nothing
