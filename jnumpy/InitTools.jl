@@ -37,18 +37,15 @@ The precompiled file goes wrong for unknown reason.
 Removing and re-adding works.
 """
 function force_resolve(typython_dir::AbstractString)
-    try
-        Pkg.rm("TyPython")
-    catch
-    end
-    _develop_typython(typython_dir)
+    Pkg.rm("TyPython", io=devnull)
+    Pkg.develop(path=typython_dir, io=devnull)
     Pkg.resolve()
     Pkg.instantiate()
     nothing
 end
 
 function activate_project(project_dir::AbstractString, typython_dir::AbstractString; check::Bool=true)
-    Pkg.activate(abspath(project_dir), io=devnull)
+    Pkg.activate(project_dir, io=devnull)
     check && force_resolve(typython_dir)
     nothing
 end
