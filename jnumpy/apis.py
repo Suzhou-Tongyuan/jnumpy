@@ -24,31 +24,25 @@ def include_src(src_file: str, current_file_path: str = "./__init__.py"):
     exec_julia(r"include({})".format(escape_to_julia_rawstr(src_abspath.as_posix())))
 
 
-def load_project(package_entry_filepath: str = "./__init__.py"):
-    """
-    include the julia module in the current project
-
-    Arguments:
-      package_entry_filepath(option):
-        should be the `__file__` of the package's toplevel `__init__.py`.
-    """
-    # activate project before include module
-    py_package_rootdir = (
-        pathlib.Path(package_entry_filepath).absolute().parent.as_posix()
+@contextlib.contextmanager
+def activate_project_nocheck(project_dir: str):
+    exec_julia(
+        f"InitTools.activate_project({escape_to_julia_rawstr(project_dir)},"
+        f"{escape_to_julia_rawstr(TyPython_directory)}; check=false)",
+        use_gil=False,
     )
-    with activate_project(py_package_rootdir):
-        jl_module_name = get_project_name_checked(py_package_rootdir)
-        try:
-            exec_julia("import {0}".format(jl_module_name), use_gil=False)
-        except JuliaError:
-            exec_julia("InitTools.force_resolve({escape_to_julia_rawstr(TyPython_directory)})", use_gil=False)
-            exec_julia("import {0}".format(jl_module_name), use_gil=False)
-
-    return
+    try:
+        yield
+    finally:
+        exec_julia(
+            f"InitTools.activate_project({escape_to_julia_rawstr(SessionCtx.DEFAULT_PROJECT_DIR)},"
+            f"{escape_to_julia_rawstr(TyPython_directory)}; check=false)",
+            use_gil=False,
+        )
 
 
 @contextlib.contextmanager
-def activate_project(project_dir: str):
+def activate_project_checked(project_dir: str):
     exec_julia(
         f"InitTools.activate_project({escape_to_julia_rawstr(project_dir)},"
         f"{escape_to_julia_rawstr(TyPython_directory)})",
@@ -93,14 +87,23 @@ def get_project_name_checked(project_dir: str):
 
 def init_project(package_entry_filepath):
     project_dir = pathlib.Path(package_entry_filepath).absolute().parent.as_posix()
-    with activate_project(project_dir):
-        jl_module_name = get_project_name_checked(project_dir)
-        try:
+    try:
+        with activate_project_nocheck(project_dir):
+            jl_module_name = get_project_name_checked(project_dir)
             exec_julia(
                 "import {0};TyPython.CPython.init();{0}.init()".format(jl_module_name)
             )
-        except JuliaError:
-            exec_julia("InitTools.force_resolve({escape_to_julia_rawstr(TyPython_directory)})", use_gil=False)
+    except JuliaError:
+        with activate_project_checked(project_dir):
+            jl_module_name = get_project_name_checked(project_dir)
+            exec_julia(
+                f"InitTools.setup_environment({escape_to_julia_rawstr(TyPython_directory)})",
+                use_gil=True,
+            )
+            exec_julia(
+                f"InitTools.force_resolve({escape_to_julia_rawstr(TyPython_directory)})",
+                use_gil=True,
+            )
             exec_julia(
                 "import {0};TyPython.CPython.init();{0}.init()".format(jl_module_name)
             )

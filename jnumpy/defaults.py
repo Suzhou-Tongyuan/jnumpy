@@ -3,8 +3,7 @@ import os
 import subprocess
 import shutil
 import jnumpy.envars as envars
-from jill.utils.interactive_utils import query_yes_no
-from jill.install import install_julia
+import warnings
 
 
 def get_jnumpy_dir():
@@ -50,6 +49,9 @@ def get_default_julia_exe() -> str:
         julia_exepath = check_valid_julia_exe(julia_exepath)
 
     if not julia_exepath:
+        assure_jill()
+        from jill.utils.interactive_utils import query_yes_no
+
         quest = "Can not find julia.\nWould you like jnumpy to install julia now?"
         to_continue = query_yes_no(quest)
         if not to_continue:
@@ -73,6 +75,24 @@ def setup_julia(version=None):
     print("installing julia with jill...\n")
     install_dir = os.path.join(get_jnumpy_dir(), "julias")
     symlink_dir = get_symlink_dir()
+
+    assure_jill()
+    from jill.install import install_julia
+
     install_julia(
         version=version, install_dir=install_dir, symlink_dir=symlink_dir, confirm=False
     )
+
+
+def assure_jill():
+    try:
+        import jill
+    except ImportError:
+        warnings.warn(
+            "jill is not installed, but `jill` (auto-install julia tool) is missing!\n"
+        )
+        raise RuntimeError(
+            "Julia is not available at this machine, but automatic Julia installation is not available due to:\n"
+            "    jill is missing.\n"
+            "Possible fix: `pip install jill`."
+        )

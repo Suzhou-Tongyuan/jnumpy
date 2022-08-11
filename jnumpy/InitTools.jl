@@ -23,6 +23,8 @@ function _develop_typython(typython_dir::AbstractString)
 end
 
 function setup_environment(typython_dir::AbstractString)
+    println("setup!")
+    flush(stdout)
     if !check_if_typython_installed(typython_dir)
         _develop_typython(typython_dir)
         Pkg.resolve()
@@ -37,16 +39,19 @@ The precompiled file goes wrong for unknown reason.
 Removing and re-adding works.
 """
 function force_resolve(typython_dir::AbstractString)
-    Pkg.rm("TyPython", io=devnull)
+    try
+        Pkg.rm("TyPython", io=devnull)
+    catch
+    end
     Pkg.develop(path=typython_dir, io=devnull)
     Pkg.resolve()
     Pkg.instantiate()
     nothing
 end
 
-function activate_project(project_dir::AbstractString, typython_dir::AbstractString)
+function activate_project(project_dir::AbstractString, typython_dir::AbstractString; check::Bool=true)
     Pkg.activate(project_dir, io=devnull)
-    setup_environment(typython_dir)
+    check && force_resolve(typython_dir)
     nothing
 end
 
