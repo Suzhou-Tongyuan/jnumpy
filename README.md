@@ -32,6 +32,10 @@ Note that JNumPy will install julia in `JNUMPY_HOME` for you, if there is no Jul
         end
     end
 
+    # the following code is optional,
+    # but makes Python code loading much faster since the second time.
+    precompile(init, ())
+
     end
     ```
 

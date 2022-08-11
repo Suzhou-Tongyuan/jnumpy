@@ -27,4 +27,6 @@ function init()
     end
 end
 
+precompile(init, ())
+
 end # end of module
