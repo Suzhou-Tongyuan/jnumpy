@@ -11,6 +11,7 @@ include = ["jnumpy/TyPython/Project.toml", "jnumpy/TyPython/src/*.jl"]
 [tool.poetry.dependencies]
 python = "^3.7"
 numpy = "^1.18"
+tomli = "^2.0.1"
 
 [tool.poetry.dev-dependencies]
 
