@@ -1,7 +1,8 @@
 module InitTools
-
 import Pkg
 import UUIDs
+
+@nospecialize
 
 function check_if_typython_installed(typython_dir::AbstractString)
     VERSION >= v"1.9" && error("Support for Julia 1.9 is coming soon.")
@@ -23,8 +24,6 @@ function _develop_typython(typython_dir::AbstractString)
 end
 
 function setup_environment(typython_dir::AbstractString)
-    println("setup!")
-    flush(stdout)
     if !check_if_typython_installed(typython_dir)
         _develop_typython(typython_dir)
         Pkg.resolve()
@@ -38,7 +37,7 @@ end
 The precompiled file goes wrong for unknown reason.
 Removing and re-adding works.
 """
-function force_resolve(typython_dir::AbstractString)
+@noinline function force_resolve(typython_dir::AbstractString)
     try
         Pkg.rm("TyPython", io=devnull)
     catch
@@ -49,9 +48,9 @@ function force_resolve(typython_dir::AbstractString)
     nothing
 end
 
-function activate_project(project_dir::AbstractString, typython_dir::AbstractString; check::Bool=true)
+@noinline function activate_project(project_dir::AbstractString, typython_dir::AbstractString)
     Pkg.activate(project_dir, io=devnull)
-    check && force_resolve(typython_dir)
+    force_resolve(typython_dir)
     nothing
 end
 

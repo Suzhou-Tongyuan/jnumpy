@@ -5,6 +5,7 @@ from jnumpy.init import JuliaError, exec_julia
 import contextlib
 import subprocess
 import pathlib
+import tomli
 
 
 def include_src(src_file: str, current_file_path: str = "./__init__.py"):
@@ -27,16 +28,14 @@ def include_src(src_file: str, current_file_path: str = "./__init__.py"):
 @contextlib.contextmanager
 def activate_project_nocheck(project_dir: str):
     exec_julia(
-        f"InitTools.activate_project({escape_to_julia_rawstr(project_dir)},"
-        f"{escape_to_julia_rawstr(TyPython_directory)}; check=false)",
+        f"Pkg.activate({escape_to_julia_rawstr(project_dir)}, io=devnull)",
         use_gil=False,
     )
     try:
         yield
     finally:
         exec_julia(
-            f"InitTools.activate_project({escape_to_julia_rawstr(SessionCtx.DEFAULT_PROJECT_DIR)},"
-            f"{escape_to_julia_rawstr(TyPython_directory)}; check=false)",
+            f"Pkg.activate({escape_to_julia_rawstr(SessionCtx.DEFAULT_PROJECT_DIR)}, io=devnull)",
             use_gil=False,
         )
 
@@ -60,22 +59,18 @@ def activate_project_checked(project_dir: str):
 
 def get_project_name_no_exc(project_dir: str):
     """!!!This function can return empty string!"""
+    project_path = pathlib.Path(project_dir).joinpath("Project.toml")
+
+    with open(project_path, "rb") as f:
+        toml_dict = tomli.load(f)
     try:
-        name = invoke_interpreted_julia(
-            SessionCtx.JULIA_EXE,
-            [
-                "-e",
-                rf'import TOML; TOML.parsefile(joinpath({escape_to_julia_rawstr(project_dir)}, "Project.toml"))["name"] |> println',
-            ],
-        )
-    except subprocess.CalledProcessError:
+        name = toml_dict["name"]
+    except KeyError:
         raise RuntimeError(
             f"{project_dir} does not have a Project.toml with a top-level"
             f"entry 'name = xxx' and the '[deps]' section."
         )
-    if isinstance(name, bytes):
-        jl_module_name = name.decode("utf-8").strip()
-        return jl_module_name
+    return name
 
 
 def get_project_name_checked(project_dir: str):
