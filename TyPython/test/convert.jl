@@ -72,6 +72,10 @@ end
     @test x3 == ComplexF32(1+0.5im)
     @test_throws CPython.PyException py_coerce(ComplexF64, py_cast(Py, 1.0))
     @test_throws CPython.PyException py_coerce(ComplexF64, py_cast(Py, "abc"))
+
+    @test py_coerce(Tuple{Int, String}, py_cast(Py, (1, "a"))) == (1, "a")
+    @test_throws CPython.PyException py_coerce(Tuple{Int, String}, py_cast(Py, (1, 1)))
+    @test_throws CPython.PyException py_coerce(Tuple{Int, String}, py_cast(Py, 1))
 end
 
 @testset "py_cast" begin
@@ -98,11 +102,12 @@ end
     @test py_cast(ComplexF64, py_cast(Py, 1)) === 1.0+0.0im
     @test_throws CPython.PyException py_cast(Float64, py_cast(Py, "abc"))
 
-    # in these cases py_cast falls back to py_coerce
     @test py_cast(Tuple{Int, String}, py_cast(Py, (1, "a"))) == (1, "a")
     @test_throws CPython.PyException py_cast(Tuple{Int, String}, py_cast(Py, (1, 1)))
+    @test_throws ErrorException py_cast(Tuple{Int}, py_cast(Py, (1, 1)))
     @test_throws CPython.PyException py_cast(Tuple{Int, String}, py_cast(Py, 1))
 
+    # in these cases py_cast falls back to py_coerce
     @test py_cast(String, py_cast(Py, "äbc")) == "äbc"
     a = [1 2 3; 3 4 5]
     @test py_cast(Array, py_cast(Py, a)) == [1 2 3; 3 4 5]

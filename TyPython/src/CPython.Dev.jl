@@ -87,7 +87,7 @@ function export_py(__module__::Module, __source__::LineNumberNode, fi::FuncInfo)
                 return $Py_NULLPTR
             end
             $([:(local $(Symbol("arg", i)) = $Py($BorrowReference(), $unsafe_load(_vectorargs, $i))) for i = 1:nargs]...)
-            __o = py_cast($Py, $(fi.name)($([:($py_coerce($(parTypes[i]), $(Symbol("arg", i)))) for i = 1:nargs]...)))
+            __o = $py_cast($Py, $(fi.name)($([:($py_coerce($(parTypes[i]), $(Symbol("arg", i)))) for i = 1:nargs]...)))
             $CPython.PyAPI.Py_IncRef(__o)
             return $unsafe_unwrap(__o)
         end
