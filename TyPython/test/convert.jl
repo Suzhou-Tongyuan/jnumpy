@@ -104,6 +104,7 @@ end
 
     @test py_cast(Tuple{Int, String}, py_cast(Py, (1, "a"))) == (1, "a")
     @test_throws CPython.PyException py_cast(Tuple{Int, String}, py_cast(Py, (1, 1)))
+    @test_throws ErrorException py_cast(Tuple{Int}, py_cast(Py, (1, 1)))
     @test_throws CPython.PyException py_cast(Tuple{Int, String}, py_cast(Py, 1))
 
     # in these cases py_cast falls back to py_coerce

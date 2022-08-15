@@ -205,6 +205,14 @@ function unsafe_pytuple_get(o::Py, i::Integer)
     return Py(item)
 end
 
+function check_tuple_length(T, py::Py)
+    len_tuple = length(T.parameters)
+    len_py_tuple = PyAPI.PyTuple_Size(py)
+    if len_tuple != len_py_tuple
+        error("length of $py is $len_py_tuple, but length of $T is $len_tuple")
+    end
+end
+
 @generated function py_coerce(::Type{T}, py::Py)::T where T <: Tuple
     T isa DataType && :(error("$T is not a data type"))
     result = Expr(:tuple, [:($py_coerce($t, $unsafe_pytuple_get(py, $(i - 1)))) for (i, t) in enumerate(T.parameters)]...)
@@ -213,6 +221,7 @@ end
             $py_seterror!(G_PyBuiltin.TypeError, "expected a tuple")
             $py_throw()
         end
+        $check_tuple_length(T, py)
         $result
     end
 end
@@ -275,6 +284,7 @@ end
             $py_seterror!(G_PyBuiltin.TypeError, "expected a tuple")
             $py_throw()
         end
+        $check_tuple_length(T, py)
         $result
     end
 end

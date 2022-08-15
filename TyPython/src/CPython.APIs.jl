@@ -98,6 +98,7 @@ mutable struct PythonAPIStruct
     PyTuple_SetItem::cfunc_t(C.Ptr{PyObject}, Py_ssize_t, C.Ptr{PyObject}, Except(-1, Cint)) # except -1
     PyTuple_GetItem::cfunc_t(C.Ptr{PyObject}, Py_ssize_t, Except(Py_NULLPTR, C.Ptr{PyObject}))
     PyTuple_New::cfunc_t(Py_ssize_t, Except(Py_NULLPTR, C.Ptr{PyObject})) # except NULL
+    PyTuple_Size::cfunc_t(C.Ptr{PyObject}, Py_ssize_t)
 
     PyImport_ImportModule::cfunc_t(Cstring, Except(Py_NULLPTR, C.Ptr{PyObject})) # except NULL
 
