@@ -35,7 +35,7 @@ def activate_project_nocheck(project_dir: str):
         yield
     finally:
         exec_julia(
-            f"Pkg.activate({escape_to_julia_rawstr(project_dir)}, io=devnull)",
+            f"Pkg.activate({escape_to_julia_rawstr(SessionCtx.DEFAULT_PROJECT_DIR)}, io=devnull)",
             use_gil=False,
         )
 
