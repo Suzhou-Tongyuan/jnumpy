@@ -103,7 +103,7 @@ There are several examples presented in the `demo` directory. Those examples are
 
 - `demo/kmeans`: a tiny Python package wrapping [ParallelKMeans.jl](https://pydatablog.github.io/ParallelKMeans.jl/stable/). It produces a 10x performance gain against Scikit-Learn.
 
-- `demo/fft`: a tiny Python package wrapping FFTW.jl. It allows users to access FFT plans for accelerating FFTs.
+- `demo/fft`: a tiny Python package wrapping [FFTW.jl](https://github.com/JuliaMath/FFTW.jl), and indirectly the GPL-licenced FFTW library. It allows users to access FFT plans for accelerating FFTs.
 
 ## Contributions
 
