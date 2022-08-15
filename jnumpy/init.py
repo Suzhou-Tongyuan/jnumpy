@@ -173,7 +173,7 @@ def init_jl():
             try:
                 exec_julia(
                     f"InitTools.setup_environment({escape_to_julia_rawstr(TyPython_directory)})",
-                    use_gil=True,
+                    use_gil=False,
                 )
             except JuliaError:
                 pass
@@ -184,7 +184,6 @@ def init_jl():
         try:
             exec_julia(
                 rf"""
-                import Pkg
                 import TyPython
                 import TyPython.CPython
                 TyPython.CPython.init()
