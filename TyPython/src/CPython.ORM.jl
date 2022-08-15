@@ -210,7 +210,7 @@ end
     result = Expr(:tuple, [:($py_coerce($t, $unsafe_pytuple_get(py, $(i - 1)))) for (i, t) in enumerate(T.parameters)]...)
     quote
         if $CPython.PyAPI.PyObject_IsInstance(py,  $CPython.PyAPI.PyTuple_Type) == 0
-            $CPython.PyAPI.PyErr_SetString($CPython.PyAPI.PyExc_TypeError[], "expected a tuple")
+            $py_seterror!(G_PyBuiltin.TypeError, "expected a tuple")
             $py_throw()
         end
         $result
@@ -267,8 +267,16 @@ function py_cast(::Type{T}, py::Py)::T where T <: AbstractString
     py_coerce(T, py)
 end
 
-function py_cast(::Type{T}, py::Py)::T where T <: Tuple
-    py_coerce(T, py)
+@generated function py_cast(::Type{T}, py::Py)::T where T <: Tuple
+    T isa DataType && :(error("$T is not a data type"))
+    result = Expr(:tuple, [:($py_cast($t, $unsafe_pytuple_get(py, $(i - 1)))) for (i, t) in enumerate(T.parameters)]...)
+    quote
+        if $CPython.PyAPI.PyObject_IsInstance(py,  $CPython.PyAPI.PyTuple_Type) == 0
+            $py_seterror!(G_PyBuiltin.TypeError, "expected a tuple")
+            $py_throw()
+        end
+        $result
+    end
 end
 
 function py_cast(::Type{TArray}, py::Py)::TArray where {TArray <: StridedArray}
