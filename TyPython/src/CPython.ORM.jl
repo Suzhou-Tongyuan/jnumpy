@@ -292,7 +292,7 @@ end
     end
 end
 
-function py_cast(::Type{TArray}, py::Py)::TArray where {TArray <: StridedArray}
+function py_cast(::Type{TArray}, py::Py)::TArray where {TArray <: AbstractArray}
     py_coerce(TArray, py)
 end
 
