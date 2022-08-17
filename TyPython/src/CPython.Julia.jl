@@ -67,7 +67,7 @@ function DynamicArray(x::TArray) where TArray<:AbstractArray
     typekind = get_typekind(zero(et))
     if x isa LinearAlgebra.Transpose
         return LinearAlgebra.transpose(DynamicArray(LinearAlgebra.transpose(x)))
-    elseif x isa PermutedDimsArray
+    elseif x isa PermutedDimsArray && parent(x) isa StridedArray
         return permutedims(DynamicArray(parent(x)), get_perm(x))
     end
     normalized_x = if x isa StridedArray
