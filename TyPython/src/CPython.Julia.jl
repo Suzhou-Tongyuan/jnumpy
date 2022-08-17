@@ -70,7 +70,7 @@ function DynamicArray(x::TArray) where TArray<:AbstractArray
     elseif x isa PermutedDimsArray
         return permutedims(DynamicArray(parent(x)), get_perm(x))
     end
-    normalized_x = if x isa Array
+    normalized_x = if x isa StridedArray
         x
     else
         collect(x)
