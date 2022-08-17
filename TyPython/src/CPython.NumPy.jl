@@ -83,7 +83,6 @@ function from_ndarray(x::Py)
     ptr = C.Ptr{PyArrayInterface}(_get_capsule_ptr(__array_struct__))
     info = ptr[] :: PyArrayInterface
     info.typekind in supported_kinds || error("unsupported numpy dtype: $(Char(ptr.typekind))")
-    # TODO: support no-copy transpose in the future
     flags = info.flags
     if (!(checkbit(flags, NPY_ARRAY_F_CONTIGUOUS) || checkbit(flags, NPY_ARRAY_C_CONTIGUOUS)) ||
         !checkbit(flags, TYPY_SUPPORTED_NO_COPY_NP_FLAG))
@@ -152,7 +151,7 @@ function from_ndarray(x::Py)
         if info.nd == 2
             arr = transpose(arr)
         elseif info.nd > 2
-            perm = Tuple(Int(info.nd):-1:1) # todo: check nd>0
+            perm = Tuple(reverse(1:info.nd))
             arr = PermutedDimsArray(arr, perm)
         end
     end
