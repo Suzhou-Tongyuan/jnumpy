@@ -137,7 +137,7 @@ function py_coerce(::Type{Py}, @nospecialize(xs::DynamicArray))
     np = get_numpy()
     nparray = np.asarray(types.SimpleNamespace(__array_struct__ = capsule))
     if xs.need_permute
-        nparray = nparray.transpose(py_cast(Py, Tuple(xs.perm)))
+        nparray = nparray.transpose(py_cast(Py, xs.perm))
     end
     return nparray
 end

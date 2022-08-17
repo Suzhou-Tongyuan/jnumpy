@@ -338,29 +338,5 @@ function py_cast(::Type{Py}, o::Py)
 end
 
 function py_cast(::Type{Py}, o::T) where T <: AbstractArray
-    py_cast_array(o, array_cast_trait(T))
-end
-
-struct SupportedArrayCast end
-struct UnsupportedArrayCast end
-
-
-function array_cast_trait(T)
-    return UnsupportedArrayCast()
-end
-
-function array_cast_trait(::Type{TArray}) where TArray<:StridedArray
-    return SupportedArrayCast()
-end
-
-function array_cast_trait(::Type{LinearAlgebra.Transpose{T, TArray}}) where {T, TArray<:StridedArray{T}}
-    return SupportedArrayCast()
-end
-
-function array_cast_trait(::Type{PermutedDimsArray{T, N, perm, iperm, AA}}) where {T, N, perm, iperm, AA<:StridedArray{T}}
-    return SupportedArrayCast()
-end
-
-function py_cast_array(o::T, ::SupportedArrayCast) where T<:AbstractArray
     py_coerce(Py, o)
 end
