@@ -110,11 +110,15 @@ end
     # in these cases py_cast falls back to py_coerce
     @test py_cast(String, py_cast(Py, "äbc")) == "äbc"
     a = [1 2 3; 3 4 5]
-    @test py_cast(Array, py_cast(Py, a)) == [1 2 3; 3 4 5]
-    @test py_cast(Array, py_cast(Py, transpose(a))) == [1 3; 2 4; 3 5]
-    x4 = py_cast(Matrix{Int32}, py_cast(Py, Float32.(a)))
+    @test py_cast(Array, py_cast(Py, a)) == a
+    @test py_cast(Array, py_cast(Py, transpose(a))) == collect(transpose(a))
+    x4 = py_cast(Matrix{Int32}, py_cast(Py, a))
     @test x4 isa Matrix{Int32}
-    @test x4 == Int32[1 2 3; 3 4 5]
+    @test x4 == Int32.(a)
+    b = PermutedDimsArray(rand(Int, (2, 3, 4)), (3, 2, 1))
+    c = py_cast(Py, b)
+    @test py_cast(NTuple{3, Int}, c.shape) == (4, 3, 2)
+    @test py_cast(PermutedDimsArray, c) == b
     @test_throws CPython.PyException py_cast(Array, py_cast(Py, "abc"))
     @test_throws MethodError py_cast(Py, a') # adjoint is unspported
 end

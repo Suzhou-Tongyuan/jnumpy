@@ -8,6 +8,8 @@ struct DynamicArray
     itemsize :: Cint
     typekind :: Cchar
     is_c_style :: Bool
+    need_permute :: Bool
+    perm :: ShapeType
 end
 
 const G_arrayinfo = Union{DynamicArray, Nothing}[]
@@ -33,7 +35,15 @@ function __init_julia_wrap__()
 end
 
 function LinearAlgebra.transpose(d::DynamicArray)
-    DynamicArray(d.arr, d.eltype, reverse(d.shape), reverse(d.strides), d.ptr, d.ndim, d.itemsize, d.typekind, !d.is_c_style)
+    DynamicArray(d.arr, d.eltype, reverse(d.shape), reverse(d.strides), d.ptr, d.ndim, d.itemsize, d.typekind, !d.is_c_style, false, d.perm)
+end
+
+function permutedims(d::DynamicArray, perm)
+    DynamicArray(d.arr, d.eltype, d.shape, d.strides, d.ptr, d.ndim, d.itemsize, d.typekind, d.is_c_style, true, perm)
+end
+
+function get_perm(x::PermutedDimsArray{T, N, perm}) where {T, N, perm}
+    return perm .- 1
 end
 
 function get_typekind(_::Union{Int8, Int16, Int32, Int64})
@@ -57,6 +67,8 @@ function DynamicArray(x::TArray) where TArray<:AbstractArray
     typekind = get_typekind(zero(et))
     if x isa LinearAlgebra.Transpose
         return LinearAlgebra.transpose(DynamicArray(LinearAlgebra.transpose(x)))
+    elseif x isa PermutedDimsArray
+        return permutedims(DynamicArray(parent(x)), get_perm(x))
     end
     normalized_x = if x isa Array
         x
@@ -68,7 +80,8 @@ function DynamicArray(x::TArray) where TArray<:AbstractArray
     ndim = convert(Cint, ndims(normalized_x))
     itemsize = convert(Cint, sizeof(et))
     np_strides = Py_ssize_t[ itemsize * d for d in strides(normalized_x) ]
-    DynamicArray(x, et, shape, np_strides, ptr, ndim, itemsize, typekind, false)
+    perm = Tuple(0:ndim-1)
+    DynamicArray(x, et, shape, np_strides, ptr, ndim, itemsize, typekind, false, false, perm)
 end
 
 # handle GC
@@ -122,7 +135,11 @@ function py_coerce(::Type{Py}, @nospecialize(xs::DynamicArray))
     capsule = mk_capsule(xs)
     types = py_getmodule_types()
     np = get_numpy()
-    return np.asarray(types.SimpleNamespace(__array_struct__ = capsule))
+    nparray = np.asarray(types.SimpleNamespace(__array_struct__ = capsule))
+    if xs.need_permute
+        nparray = nparray.transpose(py_cast(Py, Tuple(xs.perm)))
+    end
+    return nparray
 end
 
 function py_coerce(::Type{Py}, @nospecialize(xs::AbstractArray))

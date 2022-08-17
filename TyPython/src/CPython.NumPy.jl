@@ -47,7 +47,7 @@ end
 const supported_kinds = Cchar['i', 'u', 'f', 'c']
 
 const SupportedNDim = 32  # hard coded in numpy
-const ShapeType = Union{(Tuple{repeat([Py_intptr_t], i)...} for i = 1:SupportedNDim)...}
+const ShapeType = Union{(Tuple{repeat([Py_intptr_t], i)...} for i = 0:SupportedNDim)...}
 
 function register_root(x::Py, jo::Array)
     ptr = unsafe_unwrap(x)
@@ -85,7 +85,7 @@ function from_ndarray(x::Py)
     info.typekind in supported_kinds || error("unsupported numpy dtype: $(Char(ptr.typekind))")
     # TODO: support no-copy transpose in the future
     flags = info.flags
-    if (!checkbit(flags, NPY_ARRAY_F_CONTIGUOUS) ||
+    if (!(checkbit(flags, NPY_ARRAY_F_CONTIGUOUS) || checkbit(flags, NPY_ARRAY_C_CONTIGUOUS)) ||
         !checkbit(flags, TYPY_SUPPORTED_NO_COPY_NP_FLAG))
         x = np.copy(x, order=py_cast(Py, "F"))
         __array_struct__ = x.__array_struct__
@@ -97,7 +97,11 @@ function from_ndarray(x::Py)
     shape = Tuple(Int(i)
         for i in unsafe_wrap(Array, convert(Ptr{Py_intptr_t}, info.shape), Int(info.nd); own=false)) :: ShapeType
 
-    @switch (Char(info.typekind), Int(info.itemsize)) begin
+    if checkbit(flags, NPY_ARRAY_C_CONTIGUOUS)
+        shape = reverse(shape)
+    end
+
+    arr = @switch (Char(info.typekind), Int(info.itemsize)) begin
         @case ('i', 1)
             register_root(x,
                 unsafe_wrap(Array, convert(Ptr{Int8}, info.data), shape; own=false))
@@ -143,5 +147,15 @@ function from_ndarray(x::Py)
         @case (code, nbytes)
             throw(error("unsupported numpy dtype: $(code) $(nbytes)"))
     end
+
+    if checkbit(flags, NPY_ARRAY_C_CONTIGUOUS)
+        if info.nd == 2
+            arr = transpose(arr)
+        elseif info.nd > 2
+            perm = Tuple(Int(info.nd):-1:1) # todo: check nd>0
+            arr = PermutedDimsArray(arr, perm)
+        end
+    end
+    return arr
 end
 
