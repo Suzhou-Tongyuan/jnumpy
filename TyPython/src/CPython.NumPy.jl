@@ -1,5 +1,3 @@
-export get_numpy
-
 const Py_intptr_t = Cssize_t  # TODO: verify for portability
 
 const NPY_ARRAY_C_CONTIGUOUS = Cint(0x0001)
@@ -74,6 +72,13 @@ function _get_capsule_ptr(x::Py)
     return ptr
 end
 
+
+"""
+    convert numpy ndarray to julia array
+ndarray with F-contiguous could be converted to Array without copy,
+ndarray with C-contiguous could be converted to Transpose of Array(2D) or PermutedDimsArray of Array(high dimensions) without copy,
+other ndarray will first be copied to f-contiguous ndarray, then converted to Array.
+"""
 function from_ndarray(x::Py)
     np = get_numpy()
     if PyAPI.PyObject_HasAttr(x, attribute_symbol_to_pyobject(:__array_struct__)) != 1

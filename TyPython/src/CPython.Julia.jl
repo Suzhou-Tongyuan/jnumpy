@@ -152,6 +152,11 @@ function py_coerce(::Type{Py}, @nospecialize(xs::DynamicArray))
     return nparray
 end
 
+"""
+    convert julia array to numpy ndarray
+Array, Transpose of Array, PermutedDimsArray of Array and some SubArray could be converted to ndarray without copy,
+other arrays will first be copied with collect(), then converted to ndarray.
+"""
 function py_coerce(::Type{Py}, @nospecialize(xs::AbstractArray))
     xs = DynamicArray(xs)
     py_coerce(Py, xs)
