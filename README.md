@@ -22,7 +22,7 @@ Note that JNumPy will install julia in `JNUMPY_HOME` for you, if there is no Jul
     using TyPython
     using TyPython.CPython
 
-    @export_py function mat_mul(a::StridedArray, b::StridedArray)::StridedArray
+    @export_py function mat_mul(a::AbstractArray, b::AbstractArray)::Array
         return a * b
     end
 

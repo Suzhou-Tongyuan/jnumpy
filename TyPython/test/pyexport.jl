@@ -28,11 +28,11 @@ end
     return a, b
 end
 
-@export_py function mat_mul(a::StridedArray, b::StridedArray)::StridedArray
+@export_py function mat_mul(a::AbstractArray, b::AbstractArray)::Array
     return a * b
 end
 
-@export_py function set_zero(a::StridedArray)::Nothing
+@export_py function set_zero(a::AbstractArray)::Nothing
     a[1] = zero(eltype(a))
     return nothing
 end

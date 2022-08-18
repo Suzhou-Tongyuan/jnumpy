@@ -5,7 +5,7 @@ using TyPython.CPython
 using MKL
 import ParallelKMeans
 
-@export_py function _fast_kmeans(x::StridedArray, n::Int)::Tuple{StridedArray, StridedArray}
+@export_py function _fast_kmeans(x::StridedArray, n::Int)::Tuple{Array, Array}
     r = ParallelKMeans.kmeans(ParallelKMeans.Hamerly(), x, n)
     return (r.assignments, r.centers)
 end

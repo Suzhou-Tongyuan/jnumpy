@@ -190,7 +190,7 @@ function py_coerce(::Type{T}, py::Py)::T where T <: AbstractString
     return convert(T, Base.unsafe_string(buf, size_ref[]))
 end
 
-function py_coerce(::Type{TArray}, py::Py)::TArray where {TArray <: StridedArray}
+function py_coerce(::Type{TArray}, py::Py)::TArray where {TArray <: AbstractArray}
     np = get_numpy()
     if PyAPI.PyObject_IsInstance(py, np.ndarray) == 0
         py_seterror!(G_PyBuiltin.TypeError, "expected numpy array")
@@ -292,7 +292,7 @@ end
     end
 end
 
-function py_cast(::Type{TArray}, py::Py)::TArray where {TArray <: StridedArray}
+function py_cast(::Type{TArray}, py::Py)::TArray where {TArray <: AbstractArray}
     py_coerce(TArray, py)
 end
 
@@ -338,25 +338,5 @@ function py_cast(::Type{Py}, o::Py)
 end
 
 function py_cast(::Type{Py}, o::T) where T <: AbstractArray
-    py_cast_array(o, array_cast_trait(T))
-end
-
-struct SupportedArrayCast end
-struct UnsupportedArrayCast end
-
-
-function array_cast_trait(T)
-    return UnsupportedArrayCast()
-end
-
-function array_cast_trait(::Type{TArray}) where TArray<:StridedArray
-    return SupportedArrayCast()
-end
-
-function array_cast_trait(::Type{LinearAlgebra.Transpose{S, TArray}}) where {S, TArray<:StridedArray{S}}
-    return SupportedArrayCast()
-end
-
-function py_cast_array(o::T, ::SupportedArrayCast) where T<:AbstractArray
     py_coerce(Py, o)
 end

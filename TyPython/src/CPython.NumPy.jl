@@ -1,5 +1,3 @@
-export get_numpy
-
 const Py_intptr_t = Cssize_t  # TODO: verify for portability
 
 const NPY_ARRAY_C_CONTIGUOUS = Cint(0x0001)
@@ -47,7 +45,7 @@ end
 const supported_kinds = Cchar['i', 'u', 'f', 'c']
 
 const SupportedNDim = 32  # hard coded in numpy
-const ShapeType = Union{(Tuple{repeat([Py_intptr_t], i)...} for i = 1:SupportedNDim)...}
+const ShapeType = Union{(Tuple{repeat([Py_intptr_t], i)...} for i = 0:SupportedNDim)...}
 
 function register_root(x::Py, jo::Array)
     ptr = unsafe_unwrap(x)
@@ -74,6 +72,13 @@ function _get_capsule_ptr(x::Py)
     return ptr
 end
 
+
+"""
+    convert numpy ndarray to julia array
+ndarray with F-contiguous could be converted to Array without copy,
+ndarray with C-contiguous could be converted to Transpose of Array(2D) or PermutedDimsArray of Array(high dimensions) without copy,
+other ndarray will first be copied to f-contiguous ndarray, then converted to Array.
+"""
 function from_ndarray(x::Py)
     np = get_numpy()
     if PyAPI.PyObject_HasAttr(x, attribute_symbol_to_pyobject(:__array_struct__)) != 1
@@ -83,9 +88,8 @@ function from_ndarray(x::Py)
     ptr = C.Ptr{PyArrayInterface}(_get_capsule_ptr(__array_struct__))
     info = ptr[] :: PyArrayInterface
     info.typekind in supported_kinds || error("unsupported numpy dtype: $(Char(ptr.typekind))")
-    # TODO: support no-copy transpose in the future
     flags = info.flags
-    if (!checkbit(flags, NPY_ARRAY_F_CONTIGUOUS) ||
+    if (!(checkbit(flags, NPY_ARRAY_F_CONTIGUOUS) || checkbit(flags, NPY_ARRAY_C_CONTIGUOUS)) ||
         !checkbit(flags, TYPY_SUPPORTED_NO_COPY_NP_FLAG))
         x = np.copy(x, order=py_cast(Py, "F"))
         __array_struct__ = x.__array_struct__
@@ -97,7 +101,11 @@ function from_ndarray(x::Py)
     shape = Tuple(Int(i)
         for i in unsafe_wrap(Array, convert(Ptr{Py_intptr_t}, info.shape), Int(info.nd); own=false)) :: ShapeType
 
-    @switch (Char(info.typekind), Int(info.itemsize)) begin
+    if checkbit(flags, NPY_ARRAY_C_CONTIGUOUS)
+        shape = reverse(shape)
+    end
+
+    arr = @switch (Char(info.typekind), Int(info.itemsize)) begin
         @case ('i', 1)
             register_root(x,
                 unsafe_wrap(Array, convert(Ptr{Int8}, info.data), shape; own=false))
@@ -143,5 +151,15 @@ function from_ndarray(x::Py)
         @case (code, nbytes)
             throw(error("unsupported numpy dtype: $(code) $(nbytes)"))
     end
+
+    if checkbit(flags, NPY_ARRAY_C_CONTIGUOUS)
+        if info.nd == 2
+            arr = transpose(arr)
+        elseif info.nd > 2
+            perm = Tuple(reverse(1:info.nd))
+            arr = PermutedDimsArray(arr, perm)
+        end
+    end
+    return arr
 end
 

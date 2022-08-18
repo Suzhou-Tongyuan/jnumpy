@@ -12,7 +12,7 @@ const plan1Ds = Dict{Tuple{DataType, NTuple{N, Int} where N}, FFT1D_PlanType}()
 """
 1-D FFT
 """
-@export_py function jl_fft(x::StridedVector)::StridedVector{ComplexF64}
+@export_py function jl_fft(x::StridedVector)::Vector{ComplexF64}
     x = collect(ComplexF64, x)
     plan = get!(plan1Ds, (typeof(x), size(x))) do
         FFTW.plan_fft(copy(x), 1; flags=FFTW.MEASURE)

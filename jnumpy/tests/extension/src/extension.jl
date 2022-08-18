@@ -28,7 +28,7 @@ end
     return a, b
 end
 
-@export_py function mat_mul(a::StridedArray, b::StridedArray)::StridedArray
+@export_py function mat_mul(a::AbstractArray, b::AbstractArray)::Array
     return a * b
 end
 
