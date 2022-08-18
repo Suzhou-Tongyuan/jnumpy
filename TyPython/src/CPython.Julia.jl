@@ -8,6 +8,7 @@ struct DynamicArray
     itemsize :: Cint
     typekind :: Cchar
     is_c_style :: Bool
+    is_f_style :: Bool
     need_permute :: Bool
     perm :: ShapeType
 end
@@ -35,11 +36,15 @@ function __init_julia_wrap__()
 end
 
 function LinearAlgebra.transpose(d::DynamicArray)
-    DynamicArray(d.arr, d.eltype, reverse(d.shape), reverse(d.strides), d.ptr, d.ndim, d.itemsize, d.typekind, !d.is_c_style, false, d.perm)
+    if d.is_c_style || d.is_f_style
+        DynamicArray(d.arr, d.eltype, reverse(d.shape), reverse(d.strides), d.ptr, d.ndim, d.itemsize, d.typekind, !d.is_c_style, !d.is_f_style, false, d.perm)
+    else
+        DynamicArray(d.arr, d.eltype, reverse(d.shape), reverse(d.strides), d.ptr, d.ndim, d.itemsize, d.typekind, false, false, false, d.perm)
+    end
 end
 
 function permutedims(d::DynamicArray, perm)
-    DynamicArray(d.arr, d.eltype, d.shape, d.strides, d.ptr, d.ndim, d.itemsize, d.typekind, d.is_c_style, true, perm)
+    DynamicArray(d.arr, d.eltype, d.shape, d.strides, d.ptr, d.ndim, d.itemsize, d.typekind, d.is_c_style, d.is_f_style, true, perm)
 end
 
 function get_perm(x::PermutedDimsArray{T, N, perm}) where {T, N, perm}
@@ -65,12 +70,17 @@ end
 function DynamicArray(x::TArray) where TArray<:AbstractArray
     et = eltype(TArray)
     typekind = get_typekind(zero(et))
-    if x isa LinearAlgebra.Transpose
+    if x isa LinearAlgebra.Transpose && parent(x) isa StridedArray
         return LinearAlgebra.transpose(DynamicArray(LinearAlgebra.transpose(x)))
     elseif x isa PermutedDimsArray && parent(x) isa StridedArray
         return permutedims(DynamicArray(parent(x)), get_perm(x))
     end
-    normalized_x = if x isa StridedArray
+    is_c_style = false
+    is_f_style = true
+    normalized_x = if x isa Array
+        x
+    elseif x isa StridedArray && x isa SubArray
+        is_f_style = Base.iscontiguous(x)
         x
     else
         collect(x)
@@ -81,7 +91,7 @@ function DynamicArray(x::TArray) where TArray<:AbstractArray
     itemsize = convert(Cint, sizeof(et))
     np_strides = Py_ssize_t[ itemsize * d for d in strides(normalized_x) ]
     perm = Tuple(0:ndim-1)
-    DynamicArray(x, et, shape, np_strides, ptr, ndim, itemsize, typekind, false, false, perm)
+    DynamicArray(x, et, shape, np_strides, ptr, ndim, itemsize, typekind, is_c_style, is_f_style, false, perm)
 end
 
 # handle GC
@@ -117,7 +127,7 @@ function mk_capsule(val::DynamicArray)
                 nd = val.ndim,
                 typekind = val.typekind,
                 itemsize = val.itemsize,
-                flags = (val.is_c_style ? NPY_ARRAY_C_CONTIGUOUS : NPY_ARRAY_F_CONTIGUOUS) | NPY_ARRAY_WRITEABLE | NPY_ARRAY_ALIGNED | NPY_ARRAY_NOTSWAPPED,
+                flags = (val.is_c_style ? NPY_ARRAY_C_CONTIGUOUS : Cint(0x0000)) | (val.is_f_style ? NPY_ARRAY_F_CONTIGUOUS : Cint(0x0000)) | NPY_ARRAY_WRITEABLE | NPY_ARRAY_ALIGNED | NPY_ARRAY_NOTSWAPPED,
                 shape = pointer(val.shape),
                 strides = pointer(val.strides),
                 data = val.ptr
