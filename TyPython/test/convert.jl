@@ -146,9 +146,24 @@ end
         @test !(py_cast(Bool, py_b.flags.f_contiguous))
         @test py_cast(NTuple{3, Int}, py_b.shape) == (4, 3, 2)
         @test py_cast(PermutedDimsArray, py_b) == b
+        b[1] = 0
+        @test py_cast(Int64, py_b.__getitem__(py_cast(Py, (0,0,0)))) == 0
         np = CPython.get_numpy()
         py_c = np.random.random(py_cast(Py, (2, 3, 4))).transpose(py_cast(Py, (2, 0, 1)))
         @test py_cast(Array, py_c) isa Array{Float64, 3}
+    end
+    @testset "Array with shpae (1,k,1,1)" begin
+        d = rand(1, 10, 1, 1)
+        py_d = py_cast(Py, d)
+        @test py_cast(Bool, py_d.flags.c_contiguous)
+        @test py_cast(Bool, py_d.flags.f_contiguous)
+        d[1] = 0.0
+        @test py_cast(Float64, py_d.__getitem__(py_cast(Py, (0,0,0,0)))) == 0.0
+        py_dT = py_cast(Py, PermutedDimsArray(d, (4, 3, 1, 2)))
+        @test py_cast(Bool, py_dT.flags.c_contiguous)
+        @test py_cast(Bool, py_dT.flags.f_contiguous)
+        d[2] = 1.0
+        @test py_cast(Float64, py_dT.__getitem__(py_cast(Py, (0,0,0,1)))) == 1.0
     end
     @test_throws CPython.PyException py_cast(Array, py_cast(Py, "abc"))
 end
