@@ -120,6 +120,9 @@ end
     c = py_cast(Py, b)
     @test py_cast(NTuple{3, Int}, c.shape) == (4, 3, 2)
     @test py_cast(PermutedDimsArray, c) == b
+    np = CPython.get_numpy()
+    d = np.random.random(py_cast(Py, (2, 3, 4))).transpose(py_cast(Py, (2, 0, 1)))
+    @test py_cast(Array, d) isa Array{Float64, 3}
     @test_throws CPython.PyException py_cast(Array, py_cast(Py, "abc"))
 end
 
