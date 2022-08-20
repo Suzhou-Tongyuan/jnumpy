@@ -101,7 +101,7 @@ function from_ndarray(x::Py)
     shape = Tuple(Int(i)
         for i in unsafe_wrap(Array, convert(Ptr{Py_intptr_t}, info.shape), Int(info.nd); own=false)) :: ShapeType
 
-    if checkbit(flags, NPY_ARRAY_C_CONTIGUOUS)
+    if checkbit(flags, NPY_ARRAY_C_CONTIGUOUS) && !(checkbit(flags, NPY_ARRAY_F_CONTIGUOUS))
         shape = reverse(shape)
     end
 
@@ -152,7 +152,7 @@ function from_ndarray(x::Py)
             throw(error("unsupported numpy dtype: $(code) $(nbytes)"))
     end
 
-    if checkbit(flags, NPY_ARRAY_C_CONTIGUOUS)
+    if checkbit(flags, NPY_ARRAY_C_CONTIGUOUS) && !(checkbit(flags, NPY_ARRAY_F_CONTIGUOUS))
         if info.nd == 2
             arr = transpose(arr)
         elseif info.nd > 2
