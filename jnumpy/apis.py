@@ -1,21 +1,20 @@
 from __future__ import annotations
 from jnumpy.envars import TyPython_directory, SessionCtx
-from jnumpy.utils import escape_to_julia_rawstr, invoke_interpreted_julia
+from jnumpy.utils import escape_to_julia_rawstr
 from jnumpy.init import JuliaError, exec_julia
 import contextlib
-import subprocess
 import pathlib
 import tomli
 
 
 def include_src(src_file: str, current_file_path: str = "./__init__.py"):
     """
-    include julia module in src_file
+    Include julia file.
     Arguments:
       src_file:
-        the path of julia file releative to file path.
-      file_path(option):
-        should be `__file__`, empty in repl mode.
+        the releative path of julia file.
+      current_file_path(option):
+        should be `__file__`, or use default value in repl mode.
     """
     # activate project before include module
     project_dir = pathlib.Path(current_file_path).absolute().parent

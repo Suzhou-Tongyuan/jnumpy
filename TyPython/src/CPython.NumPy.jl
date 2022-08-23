@@ -74,7 +74,9 @@ end
 
 
 """
-    convert numpy ndarray to julia array
+    from_ndarray(x::Py)
+
+Convert numpy ndarray to julia array,
 ndarray with F-contiguous could be converted to Array without copy,
 ndarray with C-contiguous could be converted to Transpose of Array(2D) or PermutedDimsArray of Array(high dimensions) without copy,
 other ndarray will first be copied to f-contiguous ndarray, then converted to Array.

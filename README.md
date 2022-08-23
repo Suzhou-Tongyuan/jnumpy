@@ -52,6 +52,8 @@ Note that JNumPy will install julia in `JNUMPY_HOME` for you, if there is no Jul
 
     ```python
     import jnumpy as np
+    # you may call np.set_julia_mirror(server) to use julia package server mirror,
+    # or leave the argument server empty to automatically search the nearest one.
     np.init_jl()
     np.init_project(__file__)
 

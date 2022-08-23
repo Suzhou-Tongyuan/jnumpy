@@ -141,6 +141,7 @@ end
 
 """
     py_coerce(t, py::Py)
+
 Perform no cast but use the underlying type for coercions.
 """
 py_coerce(t, py::Py)
@@ -233,7 +234,8 @@ end
 
 """
     py_cast(t, py::Py)
-cast python object to julia
+
+Cast python object to julia.
 """
 function py_cast(::Type{Nothing}, py::Py)
     py_coerce(Nothing, py)
@@ -298,7 +300,8 @@ end
 
 """
     py_cast(Py, o)
-cast julia variable to python object
+
+Cast julia variable to python object.
 """
 function py_cast(::Type{Py}, o::Tuple)
     n = length(o)
