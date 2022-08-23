@@ -10,11 +10,25 @@ import threading
 
 
 def set_julia_path(path: str):
+    """
+    Set the environment `TYPY_JL_EXE`.
+    Arguments:
+      path:
+        path of the julia executable.
+    """
     path = os.path.abspath(os.path.expanduser(path))
     os.environ["TYPY_JL_EXE"] = path
 
-# only work when users haven't set the environment `JULIA_PKG_SERVER` manually
+
 def set_julia_mirror(server: str=""):
+    """
+    Set the environment `JULIA_PKG_SERVER` for julia package server.
+    Only work when users haven't set the environment `JULIA_PKG_SERVER` manually.
+    Arguments:
+      server:
+        the url of julia package server, like "https://pkg.julialang.org",
+        or leave it empty to auto search a nearest server mirror.
+    """
     if not os.environ.get("JULIA_PKG_SERVER"):
         server = server if server else get_fast_mirror()
         os.environ["JULIA_PKG_SERVER"] = server
