@@ -69,6 +69,13 @@ function init(ptr :: Ptr{Cvoid})
         builtins = PyAPI.PyImport_ImportModule("builtins")
         unsafe_set!(G_PyBuiltin, builtins)
         init_values!(G_PyBuiltin)
+        # may slow down init
+        init_valuebase()
+        jnp = PyAPI.PyImport_ImportModule("jnumpy")
+        unsafe_set!(G_JNUMPY, jnp)
+        unsafe_set!(jnpvaluebase, PyJuliaBase_Type[])
+        G_JNUMPY.ValueBase = jnpvaluebase
+        init_jlwrap_raw()
         if PyAPI.Py_AtExit(@cfunction(_atpyexit, Cvoid, ())) == -1
             @warn "Py_AtExit() error"
         end

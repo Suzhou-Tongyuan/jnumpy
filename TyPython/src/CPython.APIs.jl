@@ -47,6 +47,10 @@ function unsafe_set!(x::Py, p::C.Ptr{PyObject})
     nothing
 end
 
+function getptr(x::Py)
+    getfield(x, :ptr)
+end
+
 mutable struct PythonAPIStruct
     Py_Initialize::cfunc_t(Cvoid)
     Py_InitializeEx::cfunc_t(Cint, Cvoid)
@@ -81,6 +85,8 @@ mutable struct PythonAPIStruct
     PyUnicode_FromString::cfunc_t(Cstring, Except(Py_NULLPTR, C.Ptr{PyObject})) # except NULL
     PyUnicode_AsUTF8AndSize::cfunc_t(C.Ptr{PyObject}, Ptr{Py_ssize_t}, Except(C_NULL, Ptr{Cchar}))
     PyUnicode_FromStringAndSize::cfunc_t(Cstring, Py_ssize_t, Except(Py_NULLPTR, C.Ptr{PyObject})) # except NULL
+    PyBytes_FromStringAndSize::cfunc_t(Ptr{Cchar}, Py_ssize_t, Except(Py_NULLPTR, C.Ptr{PyObject})) # except NULL
+    PyBytes_AsStringAndSize::cfunc_t(C.Ptr{PyObject}, Ptr{Ptr{Cchar}}, Ptr{Py_ssize_t}, Except(-1, Cint)) # except -1
     PyErr_Print::cfunc_t(Cvoid) # no except
     PyErr_Occurred::cfunc_t(C.Ptr{PyObject}) # not set -> NULL
     PyErr_SetString::cfunc_t(C.Ptr{PyObject}, Cstring, Cvoid) # no except
@@ -94,6 +100,7 @@ mutable struct PythonAPIStruct
     PyExc_IndexError::C.Ptr{C.Ptr{PyObject}}
     PyExc_KeyError::C.Ptr{C.Ptr{PyObject}}
     PyExc_ValueError::C.Ptr{C.Ptr{PyObject}}
+    PyExc_BufferError::C.Ptr{C.Ptr{PyObject}}
 
     PyTuple_SetItem::cfunc_t(C.Ptr{PyObject}, Py_ssize_t, C.Ptr{PyObject}, Except(-1, Cint)) # except -1
     PyTuple_GetItem::cfunc_t(C.Ptr{PyObject}, Py_ssize_t, Except(Py_NULLPTR, C.Ptr{PyObject}))
@@ -110,6 +117,11 @@ mutable struct PythonAPIStruct
     PyFloat_Type::C.Ptr{PyObject}
     PyComplex_Type::C.Ptr{PyObject}
     PyTuple_Type::C.Ptr{PyObject}
+    _Py_TrueStruct::C.Ptr{PyObject}
+    _Py_FalseStruct::C.Ptr{PyObject}
+
+    PyType_IsSubtype::cfunc_t(C.Ptr{PyObject}, C.Ptr{PyObject}, Cint)
+    PyType_Ready::cfunc_t(C.Ptr{PyObject}, Cint) # except -1
 
     PyLong_AsLongLong::cfunc_t(C.Ptr{PyObject}, Clonglong) # except -1 ana error occurred
     PyLong_FromLongLong::cfunc_t(Clonglong, Except(Py_NULLPTR, C.Ptr{PyObject})) # except -1 ana error occurred

@@ -107,6 +107,17 @@ Base.@kwdef struct PyObject
     type::Ptr{Cvoid} = C_NULL # really is Ptr{PyObject} or Ptr{PyTypeObject} but Julia 1.3 and below get the layout incorrect when circular types are involved
 end
 
+Base.@kwdef struct PyVarObject
+    ob_base::PyObject = PyObject()
+    ob_size::Py_ssize_t = 0
+end
+
+Base.@kwdef struct PyJuliaValueObject
+    ob_base::PyObject = PyObject()
+    value::Int = 0
+    weaklist::C.Ptr{PyObject} = C_NULL
+end
+
 Base.@kwdef struct Py_buffer
     buf::Ptr{Cvoid} = C_NULL
     obj::Ptr{Cvoid} = C_NULL
@@ -127,8 +138,7 @@ Base.@kwdef struct PyBufferProcs
 end
 
 Base.@kwdef struct PyTypeObject
-    ob_base :: PyObject
-    ob_size :: Py_ssize_t
+    ob_base::PyVarObject = PyVarObject()
     tp_name::Cstring = C_NULL
     tp_basicsize::Py_ssize_t = 0
     tp_itemsize::Py_ssize_t = 0
