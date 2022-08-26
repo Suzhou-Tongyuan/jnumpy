@@ -111,7 +111,11 @@ mutable struct PythonAPIStruct
 
     PyDict_New::cfunc_t(Except(Py_NULLPTR, C.Ptr{PyObject})) # except NULL
     PyDict_SetItem::cfunc_t(C.Ptr{PyObject}, C.Ptr{PyObject}, C.Ptr{PyObject}, Except(-1, Cint)) # except -1
+    PyDict_Size::cfunc_t(C.Ptr{PyObject}, Py_ssize_t)
+    PyDict_Next::cfunc_t(C.Ptr{PyObject}, Ptr{Py_ssize_t}, Ptr{C.Ptr{PyObject}}, Ptr{C.Ptr{PyObject}}, Cint)
     PyDict_Type::C.Ptr{PyObject}
+
+    PyIter_Next::cfunc_t(C.Ptr{PyObject}, C.Ptr{PyObject})
 
     PyLong_Type::C.Ptr{PyObject}
     PyFloat_Type::C.Ptr{PyObject}

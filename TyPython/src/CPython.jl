@@ -6,7 +6,7 @@ import TyPython.Utils: capture_out, unroll_do!, @suppress_error
 export get_numpy, get_py_builtin, py_throw, WITH_GIL, GILNoRaise
 export py_cast, py_coerce
 export Py
-export pyjlraw, pyisjl
+export pyisjl
 
 const G_IsInitialized = Ref(false)
 const CF_TYPY_MODE = "TYPY_MODE"
@@ -73,6 +73,7 @@ include("CPython.APIs.jl")
 include("CPython.Boot.jl")
 include("CPython.ORM.jl")
 include("CPython.Wrap.jl")
+include("CPython.RawValue.jl")
 
 const G_ATTR_SYM_MAP = Dict{Symbol, Py}()
 const G_OB_POOL = Any[]

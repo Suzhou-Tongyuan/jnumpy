@@ -73,9 +73,10 @@ function init(ptr :: Ptr{Cvoid})
         init_valuebase()
         jnp = PyAPI.PyImport_ImportModule("jnumpy")
         unsafe_set!(G_JNUMPY, jnp)
-        unsafe_set!(jnpvaluebase, PyJuliaBase_Type[])
-        G_JNUMPY.ValueBase = jnpvaluebase
+        unsafe_set!(valuebasetype, PyJuliaBase_Type[])
+        G_JNUMPY.ValueBase = valuebasetype
         init_jlwrap_raw()
+        init_typedict()
         if PyAPI.Py_AtExit(@cfunction(_atpyexit, Cvoid, ())) == -1
             @warn "Py_AtExit() error"
         end

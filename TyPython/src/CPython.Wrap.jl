@@ -1,5 +1,9 @@
 import Serialization
 
+# define class ValueBase and RawValue in module jnumpy. maybe other place?
+const G_JNUMPY = Py(UnsafeNew())
+const valuebasetype = Py(UnsafeNew())
+
 const PyJuliaBase_Type = Ref{C.Ptr{PyObject}}(C_NULL)
 
 const Py_METH_VARARGS = 0x0001 # args are a tuple of arguments
@@ -43,6 +47,8 @@ const PYJLFREEVALUES = Int[]
 const PYJLMETHODS = Vector{Any}()
 
 Py_Type(x::C.Ptr{PyObject}) = C.Ptr{PyObject}(x[].type)
+Py_Type(x::Py) = Py_Type(getptr(x))
+
 isflagset(flags, mask) = (flags & mask) == mask
 
 function _pyjl_new(t::C.Ptr{PyObject}, ::C.Ptr{PyObject}, ::C.Ptr{PyObject})
@@ -85,6 +91,7 @@ function _pyjl_callmethod(f, self_::C.Ptr{PyObject}, args_::C.Ptr{PyObject}, nar
     @nospecialize f
     if PyJuliaValue_IsNull(self_)
         py_seterror!(G_PyBuiltin.TypeError, "Julia object is NULL")
+        py_throw()
         return Py_NULLPTR
     end
     in_f = false
@@ -95,21 +102,22 @@ function _pyjl_callmethod(f, self_::C.Ptr{PyObject}, args_::C.Ptr{PyObject}, nar
             ans = py_cast(Py, f(self))
             in_f = false
         elseif nargs == 2
-            arg1 = Py(PyAPI.PyObject_GetItem(args_, py_cast(Py, 1)))
+            arg1 = Py(BorrowReference(), PyAPI.PyTuple_GetItem(args_, 1)) # Borrowed reference here. incref?
             in_f = true
             ans = py_cast(Py, f(self, arg1))
             in_f = false
-            # pydel!(arg1) # del arg1 here?
+            # pydel!(arg1)
+            # cache?
         elseif nargs == 3
-            arg1 = Py(PyAPI.PyObject_GetItem(args_, py_cast(Py, 1)))
-            arg2 = Py(PyAPI.PyObject_GetItem(args_, py_cast(Py, 2)))
+            arg1 = Py(BorrowReference(), PyAPI.PyTuple_GetItem(args_, 1))
+            arg2 = Py(BorrowReference(), PyAPI.PyTuple_GetItem(args_, 2))
             in_f = true
             ans = py_cast(Py, f(self, arg1, arg2))
             in_f = false
         elseif nargs == 4
-            arg1 = Py(PyAPI.PyObject_GetItem(args_, py_cast(Py, 1)))
-            arg2 = Py(PyAPI.PyObject_GetItem(args_, py_cast(Py, 2)))
-            arg3 = Py(PyAPI.PyObject_GetItem(args_, py_cast(Py, 3)))
+            arg1 = Py(BorrowReference(), PyAPI.PyTuple_GetItem(args_, 1))
+            arg2 = Py(BorrowReference(), PyAPI.PyTuple_GetItem(args_, 2))
+            arg3 = Py(BorrowReference(), PyAPI.PyTuple_GetItem(args_, 3))
             in_f = true
             ans = py_cast(Py, f(self, arg1, arg2, arg3))
             in_f = false
@@ -211,6 +219,7 @@ end
 PyJuliaValue_New(t::C.Ptr{PyObject}, @nospecialize(v)) = begin
     if PyAPI.PyType_IsSubtype(t, PyJuliaBase_Type[]) != 1
         py_seterror!(G_PyBuiltin.TypeError, "Expecting a subtype of 'jnumpy.ValueBase'")
+        py_throw()
         return Py_NULLPTR
     end
     o = PyAPI.PyObject_CallObject(t, Py_NULLPTR)
@@ -280,70 +289,11 @@ function init_valuebase()
     end
 end
 
-# define class ValueBase and RawValue in module jnumpy. maybe other place?
-const G_JNUMPY = Py(UnsafeNew())
-
-const jnpvaluebase = Py(UnsafeNew())
-
 function pyisjl(x::Py)
     pyisjl(getptr(x))
 end
 
 function pyisjl(x::C.Ptr{PyObject})
     tpx = Py_Type(x)
-    PyAPI.PyType_IsSubtype(tpx, getptr(jnpvaluebase)) == 1
-end
-
-pyjlraw_repr(self) = py_cast(Py, "<jl $(repr(self))>")
-
-function pyjlraw_getattr(self, k_::Py)
-    k = Symbol(py_cast(String, k_))
-    # convertion?
-    py_cast(Py, getproperty(self, k))
-end
-
-function pyjlraw_call(self, args_::Py, kwargs_::Py)
-    # todo
-    @show args_, kwargs_
-    # unbox args_ and kwargs_
-
-    return self()
-end
-
-function auto_unbox(arg)
-    # todo
-end
-
-function init_jlwrap_raw()
-    pybuiltins = get_py_builtin()
-    pybuiltins.exec(pybuiltins.compile(py_cast(Py,"""
-    $("\n"^(@__LINE__()-1))
-    class RawValue(ValueBase):
-        __slots__ = ()
-        def __repr__(self):
-            if self._jl_isnull():
-                return "<jl NULL>"
-            else:
-                return self._jl_callmethod($(pyjl_methodnum(pyjlraw_repr)))
-        def __getattr__(self, k):
-            if k.startswith("__") and k.endswith("__"):
-                raise AttributeError(k)
-            else:
-                return self._jl_callmethod($(pyjl_methodnum(pyjlraw_getattr)), k)
-        def __call__(self, *args, **kwargs):
-           return self._jl_callmethod($(pyjl_methodnum(pyjlraw_call)), args, kwargs)
-    """), py_cast(Py,@__FILE__()), py_cast(Py, "exec")), G_JNUMPY.__dict__)
-end
-
-function pyjlraw(v)
-    @nospecialize v
-    o = Py(PyJuliaValue_New(getptr(G_JNUMPY.RawValue), v))
-    return o
-end
-
-pyjlraw(v::Py) = v
-
-function py_cast(::Type{Py}, o)
-    @nospecialize o
-    pyjlraw(o)
+    PyAPI.PyType_IsSubtype(tpx, valuebasetype) == 1
 end
