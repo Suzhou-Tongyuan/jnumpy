@@ -1,13 +1,16 @@
+pyjl_attr_py2jl(k::String) = replace(k, r"_[b]+$" => (x -> "!"^(length(x) - 1)))
+pyjl_attr_jl2py(k::String) = replace(k, r"!+$" => (x -> "_" * "b"^length(x)))
+
 pyjlraw_repr(self) = py_cast(Py, "<jl $(repr(self))>")
 
 function pyjlraw_getattr(self, k_::Py)
-    k = Symbol(py_coerce(String, k_))
+    k = Symbol(pyjl_attr_py2jl(py_coerce(String, k_)))
     # convertion?
     py_cast(Py, getproperty(self, k))
 end
 
 function pyjlraw_setattr(self, k_::Py, v_::Py)
-    k = Symbol(py_coerce(String, k_))
+    k = Symbol(pyjl_attr_py2jl(py_coerce(String, k_)))
     v = auto_unbox(v_)
     setproperty!(self, k, v)
     py_cast(Py, nothing)
@@ -20,9 +23,10 @@ end
 (op::pyjlraw_op)(self) = py_cast(Py, op.op(self))
 
 function (op::pyjlraw_op)(self, other_::Py)
-    t = conversion_type(other_)
+    py_tp = Py_Type(other_)
+    t = get(PyTypeDict, py_tp, Py)
     if t !== Py
-        other = auto_unbox(other_)
+        other = auto_unbox(t, other_)
         return py_cast(Py, op.op(self, other))
     else
         return G_PyBuiltin.NotImplemented
@@ -30,11 +34,11 @@ function (op::pyjlraw_op)(self, other_::Py)
 end
 
 function (op::pyjlraw_op)(self, other_::Py, other2_::Py)
-    t1 = conversion_type(other_)
-    t2 = conversion_type(other2_)
+    t1 = get(PyTypeDict, Py_Type(other_), Py)
+    t2 = get(PyTypeDict, Py_Type(other2_), Py)
     if t1 !== Py && t2 !== Py
-        other = auto_unbox(other_)
-        other2 = auto_unbox(other2_)
+        other = auto_unbox(t, other_)
+        other2 = auto_unbox(t, other2_)
         return py_cast(Py, op.op(self, other, other2))
     else
         return G_PyBuiltin.NotImplemented
@@ -78,20 +82,16 @@ function auto_unbox_dict(pykwargs::Py)
 end
 
 function auto_unbox(pyarg::Py)
-    t = conversion_type(pyarg)
+    py_tp = Py_Type(pyarg)
+    t = get(PyTypeDict, py_tp, Py)
+    auto_unbox(t, pyarg)
+end
+
+function auto_unbox(t::Type{T}, pyarg::Py) where T
     if t === JLRawValue
         return PyJuliaValue_GetValue(getptr(pyarg))
     else
         return py_coerce(t, pyarg)
-    end
-end
-
-function conversion_type(o::Py)
-    py_tp = Py_Type(o)
-    if haskey(PyTypeDict, py_tp)
-        return PyTypeDict[py_tp]
-    else
-        return Py
     end
 end
 
