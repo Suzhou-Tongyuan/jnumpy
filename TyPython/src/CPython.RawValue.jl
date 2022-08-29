@@ -2,6 +2,7 @@ pyjl_attr_py2jl(k::String) = replace(k, r"_[b]+$" => (x -> "!"^(length(x) - 1)))
 pyjl_attr_jl2py(k::String) = replace(k, r"!+$" => (x -> "_" * "b"^length(x)))
 
 pyjlraw_repr(self) = py_cast(Py, "<jl $(repr(self))>")
+pyjlany_name(self) = py_cast(Py, string(nameof(self)))
 
 function pyjlraw_getattr(self, k_::Py)
     k = Symbol(pyjl_attr_py2jl(py_coerce(String, k_)))
@@ -173,6 +174,23 @@ function init_jlwrap_raw()
             return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(⊻))), other)
         def __or__(self, other):
             return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(|))), other)
+        def __eq__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(==))), other)
+        def __ne__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(!=))), other)
+        def __le__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(≤))), other)
+        def __lt__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(<))), other)
+        def __ge__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(≥))), other)
+        def __gt__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(>))), other)
+        def __hash__(self):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(hash))))
+        @property
+        def __name__(self):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_name)))
     """), py_cast(Py,@__FILE__()), py_cast(Py, "exec")), G_JNUMPY.__dict__)
 end
 
