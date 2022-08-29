@@ -85,7 +85,7 @@ mutable struct PythonAPIStruct
     PyUnicode_FromString::cfunc_t(Cstring, Except(Py_NULLPTR, C.Ptr{PyObject})) # except NULL
     PyUnicode_AsUTF8AndSize::cfunc_t(C.Ptr{PyObject}, Ptr{Py_ssize_t}, Except(C_NULL, Ptr{Cchar}))
     PyUnicode_FromStringAndSize::cfunc_t(Cstring, Py_ssize_t, Except(Py_NULLPTR, C.Ptr{PyObject})) # except NULL
-    PyBytes_FromStringAndSize::cfunc_t(Ptr{Cchar}, Py_ssize_t, Except(Py_NULLPTR, C.Ptr{PyObject})) # except NULL
+    PyBytes_FromStringAndSize::cfunc_t(C.Ptr{Cchar}, Py_ssize_t, Except(Py_NULLPTR, C.Ptr{PyObject})) # except NULL
     PyBytes_AsStringAndSize::cfunc_t(C.Ptr{PyObject}, Ptr{Ptr{Cchar}}, Ptr{Py_ssize_t}, Except(-1, Cint)) # except -1
     PyErr_Print::cfunc_t(Cvoid) # no except
     PyErr_Occurred::cfunc_t(C.Ptr{PyObject}) # not set -> NULL

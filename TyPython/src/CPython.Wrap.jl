@@ -167,8 +167,7 @@ function _pyjl_serialize(self::C.Ptr{PyObject}, ::C.Ptr{PyObject})
         io = IOBuffer()
         Serialization.serialize(io, PyJuliaValue_GetValue(self))
         b = take!(io)
-        b = reinterpret(Int8, b)
-        return PyAPI.PyBytes_FromStringAndSize(pointer(b), sizeof(b))
+        return PyAPI.PyBytes_FromStringAndSize(C.Ptr{Int8}(pointer(b)), sizeof(b))
     catch e
         py_seterror!(G_PyBuiltin.Exception, "error serializing this value")
         rethrow(e)
@@ -184,7 +183,6 @@ function _pyjl_deserialize(t::C.Ptr{PyObject}, v::C.Ptr{PyObject})
         err = PyAPI.PyBytes_AsStringAndSize(v, ptr, len)
         err == -1 && return Py_NULLPTR
         io = IOBuffer(unsafe_wrap(Array, Ptr{UInt8}(ptr[]), Int(len[])))
-        show(stdout, io)
         x = Serialization.deserialize(io)
         return PyJuliaValue_New(t, x)
     catch e
