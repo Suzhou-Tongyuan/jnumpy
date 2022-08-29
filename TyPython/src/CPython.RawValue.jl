@@ -2,7 +2,7 @@ pyjl_attr_py2jl(k::String) = replace(k, r"_[b]+$" => (x -> "!"^(length(x) - 1)))
 pyjl_attr_jl2py(k::String) = replace(k, r"!+$" => (x -> "_" * "b"^length(x)))
 
 pyjlraw_repr(self) = py_cast(Py, "<jl $(repr(self))>")
-pyjlany_name(self) = py_cast(Py, string(nameof(self)))
+pyjlraw_name(self) = py_cast(Py, string(nameof(self)))
 
 function pyjlraw_getattr(self, k_::Py)
     k = Symbol(pyjl_attr_py2jl(py_coerce(String, k_)))
