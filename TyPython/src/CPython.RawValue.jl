@@ -13,6 +13,34 @@ function pyjlraw_setattr(self, k_::Py, v_::Py)
     py_cast(Py, nothing)
 end
 
+struct pyjlraw_op{OP}
+    op :: OP
+end
+
+(op::pyjlraw_op)(self) = py_cast(Py, op.op(self))
+
+function (op::pyjlraw_op)(self, other_::Py)
+    t = conversion_type(other_)
+    if t !== Py
+        other = auto_unbox(other_)
+        return py_cast(Py, op.op(self, other))
+    else
+        return G_PyBuiltin.NotImplemented
+    end
+end
+
+function (op::pyjlraw_op)(self, other_::Py, other2_::Py)
+    t1 = conversion_type(other_)
+    t2 = conversion_type(other2_)
+    if t1 !== Py && t2 !== Py
+        other = auto_unbox(other_)
+        other2 = auto_unbox(other2_)
+        return py_cast(Py, op.op(self, other, other2))
+    else
+        return G_PyBuiltin.NotImplemented
+    end
+end
+
 function pyjlraw_call(self, pyargs::Py, pykwargs::Py)
     # todo
     # unbox pyargs and pykwargs
@@ -50,16 +78,20 @@ function auto_unbox_dict(pykwargs::Py)
 end
 
 function auto_unbox(pyarg::Py)
-    py_tp = Py_Type(pyarg)
-    if haskey(PyTypeDict, py_tp)
-        t = PyTypeDict[py_tp]
-        if t === JLRawValue
-            return PyJuliaValue_GetValue(getptr(pyarg))
-        else
-            return py_coerce(t, pyarg)
-        end
+    t = conversion_type(pyarg)
+    if t === JLRawValue
+        return PyJuliaValue_GetValue(getptr(pyarg))
     else
-        return pyarg
+        return py_coerce(t, pyarg)
+    end
+end
+
+function conversion_type(o::Py)
+    py_tp = Py_Type(o)
+    if haskey(PyTypeDict, py_tp)
+        return PyTypeDict[py_tp]
+    else
+        return Py
     end
 end
 
@@ -104,6 +136,43 @@ function init_jlwrap_raw()
                 self._jl_callmethod($(pyjl_methodnum(pyjlraw_setattr)), k, v)
         def __call__(self, *args, **kwargs):
            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_call)), args, kwargs)
+        def __len__(self):
+           return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(length))))
+        def __pos__(self):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(+))))
+        def __neg__(self):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(-))))
+        def __abs__(self):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(abs))))
+        def __invert__(self):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(~))))
+        def __add__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(+))), other)
+        def __sub__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(-))), other)
+        def __mul__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(*))), other)
+        def __truediv__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(/))), other)
+        def __floordiv__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(÷))), other)
+        def __mod__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(%))), other)
+        def __pow__(self, other, modulo=None):
+            if modulo is None:
+                return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(^))), other)
+            else:
+                return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(powermod))), other, modulo)
+        def __lshift__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(<<))), other)
+        def __rshift__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(>>))), other)
+        def __and__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(&))), other)
+        def __xor__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(⊻))), other)
+        def __or__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(|))), other)
     """), py_cast(Py,@__FILE__()), py_cast(Py, "exec")), G_JNUMPY.__dict__)
 end
 
