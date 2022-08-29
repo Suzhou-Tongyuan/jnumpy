@@ -6,6 +6,13 @@ function pyjlraw_getattr(self, k_::Py)
     py_cast(Py, getproperty(self, k))
 end
 
+function pyjlraw_setattr(self, k_::Py, v_::Py)
+    k = Symbol(py_coerce(String, k_))
+    v = auto_unbox(v_)
+    setproperty!(self, k, v)
+    py_cast(Py, nothing)
+end
+
 function pyjlraw_call(self, pyargs::Py, pykwargs::Py)
     # todo
     # unbox pyargs and pykwargs
@@ -90,6 +97,11 @@ function init_jlwrap_raw()
                 raise AttributeError(k)
             else:
                 return self._jl_callmethod($(pyjl_methodnum(pyjlraw_getattr)), k)
+        def __setattr__(self, k, v):
+            if k.startswith("__") and k.endswith("__"):
+                raise AttributeError(k)
+            else:
+                self._jl_callmethod($(pyjl_methodnum(pyjlraw_setattr)), k, v)
         def __call__(self, *args, **kwargs):
            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_call)), args, kwargs)
     """), py_cast(Py,@__FILE__()), py_cast(Py, "exec")), G_JNUMPY.__dict__)

@@ -20,8 +20,7 @@ end
 function py_for(f, py::Py)
     py_iter = G_PyBuiltin.iter(py)
     while (item = PyAPI.PyIter_Next(py_iter)) != Py_NULLPTR
-        f(Py(BorrowReference(), item))
-        PyAPI.Py_DecRef(item)
+        f(Py(item))
     end
 end
 
