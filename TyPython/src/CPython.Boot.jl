@@ -21,6 +21,16 @@ function load_pydll!(dllpath::AbstractString)
     return Libdl.dlopen(convert(String, dllpath), Libdl.RTLD_LAZY|Libdl.RTLD_DEEPBIND|Libdl.RTLD_GLOBAL)
 end
 
+function init_jlraw()
+    init_valuebase()
+    jnp = PyAPI.PyImport_ImportModule("jnumpy")
+    unsafe_set!(G_JNUMPY, jnp)
+    unsafe_set!(valuebasetype, PyJuliaBase_Type[])
+    G_JNUMPY.ValueBase = valuebasetype
+    init_jlwrap_raw()
+    init_typedict()
+end
+
 function init()
     RT_is_initialized() && return
     if haskey(ENV, CF_TYPY_PY_APIPTR)
@@ -70,13 +80,7 @@ function init(ptr :: Ptr{Cvoid})
         unsafe_set!(G_PyBuiltin, builtins)
         init_values!(G_PyBuiltin)
         # may slow down init
-        init_valuebase()
-        jnp = PyAPI.PyImport_ImportModule("jnumpy")
-        unsafe_set!(G_JNUMPY, jnp)
-        unsafe_set!(valuebasetype, PyJuliaBase_Type[])
-        G_JNUMPY.ValueBase = valuebasetype
-        init_jlwrap_raw()
-        init_typedict()
+        init_jlraw()
         if PyAPI.Py_AtExit(@cfunction(_atpyexit, Cvoid, ())) == -1
             @warn "Py_AtExit() error"
         end
