@@ -9,8 +9,10 @@ using Test
     @testset "pyexport" begin
         include("pyexport.jl")
     end
-
     @testset "convert" begin
         include("convert.jl")
+    end
+    @testset "jlwrap" begin
+        include("jlwrap.jl")
     end
 end
