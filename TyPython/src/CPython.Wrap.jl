@@ -130,8 +130,20 @@ function _pyjl_callmethod(f, self_::C.Ptr{PyObject}, args_::C.Ptr{PyObject}, nar
         return out
     catch exc
         # todo: handle error
-        println("error!")
-        rethrow(exc)
+        if exc isa PyException
+            Base.GC.@preserve exc PyAPI.PyErr_Restore(
+                PyAPI.Py_IncRef(getptr(exc.type)),
+                PyAPI.Py_IncRef(getptr(exc.value)),
+                PyAPI.Py_IncRef(getptr(exc.traceback))
+                )
+            return Py_NULLPTR
+        else
+            errmsg = capture_out() do
+                Base.showerror(stderr, exc, catch_backtrace())
+            end
+            py_seterror!(G_JNUMPY.JuliaError, errmsg)
+            return Py_NULLPTR
+        end
     end
 end
 

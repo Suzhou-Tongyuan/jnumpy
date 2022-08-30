@@ -95,6 +95,7 @@ mutable struct PythonAPIStruct
     PyErr_Fetch::cfunc_t(C.Ptr{C.Ptr{PyObject}}, C.Ptr{C.Ptr{PyObject}}, C.Ptr{C.Ptr{PyObject}}, Cvoid) # no except
     PyErr_NormalizeException::cfunc_t(C.Ptr{C.Ptr{PyObject}}, C.Ptr{C.Ptr{PyObject}}, C.Ptr{C.Ptr{PyObject}}, Cvoid) # no except
     PyException_SetTraceback::cfunc_t(C.Ptr{PyObject}, C.Ptr{PyObject}, Cvoid) # no except
+    PyErr_Restore::cfunc_t(C.Ptr{C.Ptr{PyObject}}, C.Ptr{C.Ptr{PyObject}}, C.Ptr{C.Ptr{PyObject}}, Cvoid) # no except
     PyErr_Clear::cfunc_t(Cvoid) # no except
     PyExc_TypeError::C.Ptr{C.Ptr{PyObject}}
     PyExc_IndexError::C.Ptr{C.Ptr{PyObject}}

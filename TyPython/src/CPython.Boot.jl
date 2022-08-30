@@ -21,7 +21,7 @@ function load_pydll!(dllpath::AbstractString)
     return Libdl.dlopen(convert(String, dllpath), Libdl.RTLD_LAZY|Libdl.RTLD_DEEPBIND|Libdl.RTLD_GLOBAL)
 end
 
-function init_jlraw()
+function init_jlwrap()
     init_valuebase()
     jnp = PyAPI.PyImport_ImportModule("jnumpy")
     unsafe_set!(G_JNUMPY, jnp)
@@ -82,7 +82,7 @@ function init(ptr :: Ptr{Cvoid})
         unsafe_set!(G_PyBuiltin, builtins)
         init_values!(G_PyBuiltin)
         # may slow down init
-        init_jlraw()
+        init_jlwrap()
         if PyAPI.Py_AtExit(@cfunction(_atpyexit, Cvoid, ())) == -1
             @warn "Py_AtExit() error"
         end
