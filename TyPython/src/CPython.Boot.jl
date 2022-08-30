@@ -29,6 +29,8 @@ function init_jlraw()
     G_JNUMPY.ValueBase = valuebasetype
     init_jlwrap_raw()
     init_typedict()
+    pyMain = py_cast(Py, Main)
+    G_JNUMPY.Main = pyMain # crash in ipython
 end
 
 function init()

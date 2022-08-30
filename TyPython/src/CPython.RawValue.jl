@@ -88,11 +88,11 @@ function auto_unbox(pyarg::Py)
     auto_unbox(t, pyarg)
 end
 
-function auto_unbox(t::Type{T}, pyarg::Py) where T
-    if t === JLRawValue
+function auto_unbox(::Type{T}, pyarg::Py) where T
+    if T === JLRawValue
         return PyJuliaValue_GetValue(getptr(pyarg))
     else
-        return py_coerce(t, pyarg)
+        return py_coerce(T, pyarg)
     end
 end
 
