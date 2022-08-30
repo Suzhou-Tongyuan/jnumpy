@@ -81,8 +81,6 @@ function init(ptr :: Ptr{Cvoid})
         builtins = PyAPI.PyImport_ImportModule("builtins")
         unsafe_set!(G_PyBuiltin, builtins)
         init_values!(G_PyBuiltin)
-        # may slow down init
-        init_jlwrap()
         if PyAPI.Py_AtExit(@cfunction(_atpyexit, Cvoid, ())) == -1
             @warn "Py_AtExit() error"
         end

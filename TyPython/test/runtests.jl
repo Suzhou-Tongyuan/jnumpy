@@ -13,6 +13,7 @@ using Test
         include("convert.jl")
     end
     @testset "jlwrap" begin
+        CPython.init_jlwrap()
         include("jlwrap.jl")
     end
 end
