@@ -1,17 +1,21 @@
-pyjl_attr_py2jl(k::String) = replace(k, r"_[b]+$" => (x -> "!"^(length(x) - 1)))
-pyjl_attr_jl2py(k::String) = replace(k, r"!+$" => (x -> "_" * "b"^length(x)))
-
 pyjlraw_repr(self) = py_cast(Py, "<jl $(repr(self))>")
 pyjlraw_name(self) = py_cast(Py, string(nameof(self)))
 
+const G_STRING_SYM_MAP = Dict{String, Symbol}()
+
+function attribute_string_to_symbol(x::String)
+    get!(G_STRING_SYM_MAP, x) do
+        Symbol(x)
+    end
+end
+
 function pyjlraw_getattr(self, k_::Py)
-    k = Symbol(pyjl_attr_py2jl(py_coerce(String, k_)))
-    # convertion?
+    k = attribute_string_to_symbol(py_coerce(String, k_))
     py_cast(Py, getproperty(self, k))
 end
 
 function pyjlraw_setattr(self, k_::Py, v_::Py)
-    k = Symbol(pyjl_attr_py2jl(py_coerce(String, k_)))
+    k = attribute_string_to_symbol(py_coerce(String, k_))
     v = auto_unbox(v_)
     setproperty!(self, k, v)
     py_cast(Py, nothing)

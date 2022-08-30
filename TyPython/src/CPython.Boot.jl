@@ -30,7 +30,7 @@ function init_jlwrap()
     init_jlwrap_raw()
     init_typedict()
     pyMain = py_cast(Py, Main)
-    G_JNUMPY.Main = pyMain # crash in ipython
+    G_JNUMPY.Main = pyMain
 end
 
 function init()
