@@ -1,6 +1,9 @@
 pyjlraw_repr(self) = py_cast(Py, "<jl $(repr(self))>")
 pyjlraw_name(self) = py_cast(Py, string(nameof(self)))
 
+# may need a list
+pyjlraw_dir(self) = py_cast(Py, Tuple((string(k)) for k in propertynames(self, true)))
+
 const G_STRING_SYM_MAP = Dict{String, Symbol}()
 
 function attribute_string_to_symbol(x::String)
@@ -139,6 +142,8 @@ function init_jlwrap_raw()
                 raise AttributeError(k)
             else:
                 self._jl_callmethod($(pyjl_methodnum(pyjlraw_setattr)), k, v)
+        def __dir__(self):
+            return ValueBase.__dir__(self) + list(self._jl_callmethod($(pyjl_methodnum(pyjlraw_dir))))
         def __call__(self, *args, **kwargs):
            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_call)), args, kwargs)
         def __len__(self):
