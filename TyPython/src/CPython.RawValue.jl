@@ -1,10 +1,20 @@
+struct JLRawValue end
+const PyTypeDict = Dict{C.Ptr{PyObject}, Any}()
+const G_STRING_SYM_MAP = Dict{String, Symbol}()
+
+function attribute_string_to_symbol(x::String)
+    get!(G_STRING_SYM_MAP, x) do
+        Symbol(x)
+    end
+end
+
 pyjlraw_repr(self) = py_cast(Py, "<jl $(repr(self))>")
-pyjlraw_name(self) = py_cast(Py, string(nameof(self)))
+pyjlraw_name(self) = attribute_symbol_to_pyobject(nameof(self))
 
 function pyjlraw_dir(self)
     py_list = G_PyBuiltin.list()
     for k in propertynames(self, true)
-        py_list.append(attribute_symbol_to_pyobject(x))
+        py_list.append(attribute_symbol_to_pyobject(k))
     end
     return py_list
 end
@@ -16,18 +26,10 @@ function pyjlraw_dir(self::Module)
         append!(ks, names(m))
     end
     py_list = G_PyBuiltin.list()
-    for x in ks
-        py_list.append(attribute_symbol_to_pyobject(x))
+    for k in ks
+        py_list.append(attribute_symbol_to_pyobject(k))
     end
     return py_list
-end
-
-const G_STRING_SYM_MAP = Dict{String, Symbol}()
-
-function attribute_string_to_symbol(x::String)
-    get!(G_STRING_SYM_MAP, x) do
-        Symbol(x)
-    end
 end
 
 function pyjlraw_getattr(self, k_::Py)
@@ -72,8 +74,6 @@ function (op::pyjlraw_op)(self, other_::Py, other2_::Py)
 end
 
 function pyjlraw_call(self, pyargs::Py, pykwargs::Py)
-    # todo
-    # unbox pyargs and pykwargs
     nargs = PyAPI.PyTuple_Size(pyargs)
     nkwargs = PyAPI.PyDict_Size(pykwargs)
     if nkwargs > 0
@@ -121,8 +121,6 @@ function auto_unbox(::Type{T}, pyarg::Py) where T
     end
 end
 
-const PyTypeDict = Dict{C.Ptr{PyObject}, Any}()
-
 function init_typedict()
     pybuiltins = get_py_builtin()
     numpy = get_numpy()
@@ -136,8 +134,6 @@ function init_typedict()
     PyTypeDict[getptr(numpy.ndarray)] = AbstractArray
     PyTypeDict[getptr(G_JNUMPY.RawValue)] = JLRawValue
 end
-
-struct JLRawValue end
 
 function init_jlwrap_raw()
     pybuiltins = get_py_builtin()
