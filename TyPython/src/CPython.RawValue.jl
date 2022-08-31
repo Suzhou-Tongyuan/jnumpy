@@ -1,8 +1,26 @@
 pyjlraw_repr(self) = py_cast(Py, "<jl $(repr(self))>")
 pyjlraw_name(self) = py_cast(Py, string(nameof(self)))
 
-# may need a list
-pyjlraw_dir(self) = py_cast(Py, Tuple((string(k)) for k in propertynames(self, true)))
+function pyjlraw_dir(self)
+    py_list = G_PyBuiltin.list()
+    for k in propertynames(self, true)
+        py_list.append(attribute_symbol_to_pyobject(x))
+    end
+    return py_list
+end
+
+function pyjlraw_dir(self::Module)
+    ks = Symbol[]
+    append!(ks, names(self, all = true, imported = true))
+    for m in ccall(:jl_module_usings, Any, (Any,), self)::Vector
+        append!(ks, names(m))
+    end
+    py_list = G_PyBuiltin.list()
+    for x in ks
+        py_list.append(attribute_symbol_to_pyobject(x))
+    end
+    return py_list
+end
 
 const G_STRING_SYM_MAP = Dict{String, Symbol}()
 
@@ -143,7 +161,7 @@ function init_jlwrap_raw()
             else:
                 self._jl_callmethod($(pyjl_methodnum(pyjlraw_setattr)), k, v)
         def __dir__(self):
-            return ValueBase.__dir__(self) + list(self._jl_callmethod($(pyjl_methodnum(pyjlraw_dir))))
+            return ValueBase.__dir__(self) + self._jl_callmethod($(pyjl_methodnum(pyjlraw_dir)))
         def __call__(self, *args, **kwargs):
            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_call)), args, kwargs)
         def __len__(self):
