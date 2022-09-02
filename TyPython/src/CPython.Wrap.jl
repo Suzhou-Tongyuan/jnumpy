@@ -238,7 +238,6 @@ PyJuliaValue_New(t::C.Ptr{PyObject}, @nospecialize(v)) = begin
     return o
 end
 
-
 const _pyjlbase_name = "jnumpy.ValueBase"
 const _pyjlbase_type = fill(PyTypeObject())
 const _pyjlbase_isnull_name = "_jl_isnull"
@@ -253,6 +252,8 @@ const Py_TPFLAGS_HAVE_VERSION_TAG = (0x00000001 << 18)
 
 function init_valuebase()
     empty!(_pyjlbase_methods)
+    gen_operators()
+    append!(_pyjlbase_methods, meths)
     push!(_pyjlbase_methods,
         PyMethodDef(
             ml_name = pointer(_pyjlbase_callmethod_name),
@@ -306,4 +307,81 @@ end
 function pyisjl(x::C.Ptr{PyObject})
     tpx = Py_Type(x)
     PyAPI.PyType_IsSubtype(tpx, valuebasetype) == 1
+end
+
+const op_symbol_map = Dict{String, Symbol}(
+    "__add__" => :+,
+    "__sub__" => :-,
+    "__mul__" => :*,
+    "__truediv__" => :/,
+    "__floordiv__" => :÷,
+    "__mod__" => :%,
+    "__lshift__" => :<<,
+    "__rshift__" => :>>,
+    "__and__" => :&,
+    "__xor__" => :⊻,
+    "__or__" => :|,
+    "__eq__" => :(==),
+    "__ne__" => :(!=),
+    "__le__" => :≤,
+    "__lt__" => :<,
+    "__ge__" => :≥,
+    "__gt__" => :>
+)
+
+const meths = Vector{PyMethodDef}()
+
+function gen_cfunc(pyfname::Symbol, op::Symbol)
+    quote
+        function $pyfname(self_::$C.Ptr{PyObject}, other_::$C.Ptr{PyObject})
+            self = $PyJuliaValue_GetValue(self_)
+            py_tp = $Py_Type(other_)
+            t = $get($PyTypeDict, py_tp, $Py)
+            if t !== $Py
+                other = $auto_unbox(t, $Py($BorrowReference(), other_))
+                try
+                    out = $op(self, other)
+                    out = $getptr($py_cast($Py, out))
+                    $PyAPI.Py_IncRef(out)
+                    return out
+                catch e
+                    # MethodError?
+                    # pyexception happends here?
+                    if e isa $PyException
+                        $CPython.PyAPI.PyErr_SetObject(e.type, e.value)
+                    else
+                        errmsg = $capture_out() do
+                            $Base.showerror($stderr, e, $catch_backtrace())
+                        end
+                        $py_seterror!($G_JNUMPY.JuliaError, errmsg)
+                    end
+                    return $Py_NULLPTR
+                end
+            else
+                # return NotImplemented?
+                return $getptr(G_PyBuiltin.NotImplemented)
+            end
+        end
+    end
+end
+
+function push_meths(pyfname_string_name::String, pyfname::Symbol)
+    quote
+        push!($meths,
+            $PyMethodDef(
+                ml_name = $pointer($pyfname_string_name),
+                ml_meth = @cfunction($pyfname, $C.Ptr{$PyObject}, ($C.Ptr{$PyObject}, $C.Ptr{$PyObject})),
+                ml_flags = $Py_METH_O,
+            ),
+        )
+    end
+end
+
+function gen_operators()
+    empty!(meths)
+    for (k, v) in op_symbol_map
+        pyfname = Symbol(k, "##", "_pyfunc")
+        eval(gen_cfunc(pyfname, v))
+        eval(push_meths(k, pyfname))
+    end
 end

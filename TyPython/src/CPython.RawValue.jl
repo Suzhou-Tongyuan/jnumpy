@@ -170,45 +170,11 @@ function init_jlwrap_raw()
             return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(abs))))
         def __invert__(self):
             return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(~))))
-        def __add__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(+))), other)
-        def __sub__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(-))), other)
-        def __mul__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(*))), other)
-        def __truediv__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(/))), other)
-        def __floordiv__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(÷))), other)
-        def __mod__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(%))), other)
         def __pow__(self, other, modulo=None):
             if modulo is None:
                 return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(^))), other)
             else:
                 return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(powermod))), other, modulo)
-        def __lshift__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(<<))), other)
-        def __rshift__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(>>))), other)
-        def __and__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(&))), other)
-        def __xor__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(⊻))), other)
-        def __or__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(|))), other)
-        def __eq__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(==))), other)
-        def __ne__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(!=))), other)
-        def __le__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(≤))), other)
-        def __lt__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(<))), other)
-        def __ge__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(≥))), other)
-        def __gt__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(>))), other)
         def __hash__(self):
             return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(hash))))
         @property

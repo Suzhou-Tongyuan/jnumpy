@@ -81,7 +81,9 @@ const G_OB_POOL = Any[]
 let ln = LineNumberNode((@__LINE__), Symbol(@__FILE__))
     for (fn, ft) in zip(fieldnames(PythonAPIStruct), fieldtypes(PythonAPIStruct))
         if ft <: CPyFunction
-            expr_creat_fn = _support_ccall!(ln, ft)
+            expr_creat_fn = let ln = LineNumberNode(ln.line, Symbol(ln.file, "#", fn))
+                _support_ccall!(ln, ft)
+            end
             @eval $expr_creat_fn
         end
     end

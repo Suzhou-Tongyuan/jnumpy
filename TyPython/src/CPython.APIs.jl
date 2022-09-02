@@ -102,6 +102,7 @@ mutable struct PythonAPIStruct
     PyExc_KeyError::C.Ptr{C.Ptr{PyObject}}
     PyExc_ValueError::C.Ptr{C.Ptr{PyObject}}
     PyExc_BufferError::C.Ptr{C.Ptr{PyObject}}
+    PyExc_NotImplementedError::C.Ptr{C.Ptr{PyObject}}
 
     PyTuple_SetItem::cfunc_t(C.Ptr{PyObject}, Py_ssize_t, C.Ptr{PyObject}, Except(-1, Cint)) # except -1
     PyTuple_GetItem::cfunc_t(C.Ptr{PyObject}, Py_ssize_t, Except(Py_NULLPTR, C.Ptr{PyObject}))
