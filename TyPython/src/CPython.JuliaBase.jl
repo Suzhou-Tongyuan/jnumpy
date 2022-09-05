@@ -83,21 +83,21 @@ function _pyjl_callmethod(f, self_::C.Ptr{PyObject}, args_::C.Ptr{PyObject}, nar
     self = PyJuliaValue_GetValue(self_)
     try
         if nargs == 1
-            ans = py_cast(Py, f(self))
+            ans = f(self)::Py
         elseif nargs == 2
             arg1 = Py(BorrowReference(), PyAPI.PyTuple_GetItem(args_, 1)) # Borrowed reference here. incref?
-            ans = py_cast(Py, f(self, arg1))
+            ans = f(self, arg1)::Py
             # pydel!(arg1)
             # cache?
         elseif nargs == 3
             arg1 = Py(BorrowReference(), PyAPI.PyTuple_GetItem(args_, 1))
             arg2 = Py(BorrowReference(), PyAPI.PyTuple_GetItem(args_, 2))
-            ans = py_cast(Py, f(self, arg1, arg2))
+            ans = f(self, arg1, arg2)::Py
         elseif nargs == 4
             arg1 = Py(BorrowReference(), PyAPI.PyTuple_GetItem(args_, 1))
             arg2 = Py(BorrowReference(), PyAPI.PyTuple_GetItem(args_, 2))
             arg3 = Py(BorrowReference(), PyAPI.PyTuple_GetItem(args_, 3))
-            ans = py_cast(Py, f(self, arg1, arg2, arg3))
+            ans = f(self, arg1, arg2, arg3)::Py
         else
             py_seterror!(G_PyBuiltin.TypeError, "__jl_callmethod not implemented for this many arguments")
         end
@@ -211,8 +211,6 @@ const Py_TPFLAGS_HAVE_VERSION_TAG = (0x00000001 << 18)
 
 function init_juliabase()
     empty!(_pyjlbase_methods)
-    gen_operators()
-    append!(_pyjlbase_methods, _pyops)
     push!(_pyjlbase_methods,
         PyMethodDef(
             ml_name = pointer(_pyjlbase_callmethod_name),
@@ -266,105 +264,4 @@ end
 function pyisjl(x::C.Ptr{PyObject})
     tpx = Py_Type(x)
     PyAPI.PyType_IsSubtype(tpx, juliabasetype) == 1
-end
-
-# rev_ops?
-const _pyop_op_map = (
-    ("__len__", :length, 1),
-    ("__pos__", :+, 1),
-    ("__neg__", :-, 1),
-    ("__abs__", :abs, 1),
-    ("__invert__", :~, 1),
-    ("__hash__", :hash, 1),
-    ("__add__", :+, 2),
-    ("__sub__", :-, 2),
-    ("__mul__", :*, 2),
-    ("__truediv__", :/, 2),
-    ("__floordiv__", :÷, 2),
-    ("__mod__", :%, 2),
-    ("__pow__", :^, 2), # powermod?
-    ("__lshift__", :<<, 2),
-    ("__rshift__", :>>, 2),
-    ("__and__", :&, 2),
-    ("__xor__", :⊻, 2),
-    ("__or__", :|, 2),
-    ("__eq__", :(==), 2),
-    ("__ne__", :(!=), 2),
-    ("__le__", :≤, 2),
-    ("__lt__", :<, 2),
-    ("__ge__", :≥, 2),
-    ("__gt__", :>, 2)
-)
-
-function gen_cfunc(pyfname::Symbol, op::Symbol, nargs::Val{1})
-    quote
-        function $pyfname(self_::$C.Ptr{PyObject})
-            self = $PyJuliaValue_GetValue(self_)
-            try
-                out = $op(self)
-                out = $unsafe_unwrap($py_cast($Py, out))
-                $PyAPI.Py_IncRef(out)
-                return out
-            catch e
-                return $handle_except(e)
-            end
-        end
-    end
-end
-
-function gen_cfunc(pyfname::Symbol, op::Symbol, nargs::Val{2})
-    quote
-        function $pyfname(self_::$C.Ptr{PyObject}, other_::$C.Ptr{PyObject})
-            self = $PyJuliaValue_GetValue(self_)
-            py_tp = $Py_Type(other_)
-            t = $get($PyTypeDict, py_tp, $Py)
-            if t !== $Py
-                other = $auto_unbox(t, $Py($BorrowReference(), other_))
-                try
-                    out = $op(self, other)
-                    out = $unsafe_unwrap($py_cast($Py, out))
-                    $PyAPI.Py_IncRef(out)
-                    return out
-                catch e
-                    return $handle_except(e)
-                end
-            else
-                # return NotImplemented?
-                return $unsafe_unwrap($G_PyBuiltin.NotImplemented)
-            end
-        end
-    end
-end
-
-function push_pyop(pyfname_string_name::String, pyfname::Symbol, nargs::Val{1})
-    quote
-        push!($_pyops,
-            $PyMethodDef(
-                ml_name = $pointer($pyfname_string_name),
-                ml_meth = @cfunction($pyfname, $C.Ptr{$PyObject}, ($C.Ptr{$PyObject},)),
-                ml_flags = $Py_METH_NOARGS,
-            ),
-        )
-    end
-end
-
-function push_pyop(pyfname_string_name::String, pyfname::Symbol, nargs::Val{2})
-    quote
-        push!($_pyops,
-            $PyMethodDef(
-                ml_name = $pointer($pyfname_string_name),
-                ml_meth = @cfunction($pyfname, $C.Ptr{$PyObject}, ($C.Ptr{$PyObject}, $C.Ptr{$PyObject})),
-                ml_flags = $Py_METH_O,
-            ),
-        )
-    end
-end
-
-function gen_operators()
-    empty!(_pyops)
-    for (k, v, n) in _pyop_op_map
-        pyfname = Symbol(k, "##", "_pyfunc")
-        eval(gen_cfunc(pyfname, v, Val(n)))
-        eval(push_pyop(k, pyfname, Val(n)))
-    end
 end

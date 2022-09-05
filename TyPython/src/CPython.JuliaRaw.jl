@@ -44,6 +44,64 @@ function pyjlraw_setattr(self, k_::Py, v_::Py)
     py_cast(Py, nothing)
 end
 
+struct pyjlraw_op{OP}
+    op :: OP
+end
+
+(op::pyjlraw_op)(self) = py_cast(Py, op.op(self))
+
+function (op::pyjlraw_op)(self, other_::Py)
+    py_tp = Py_Type(other_)
+    t = get(PyTypeDict, py_tp, Py)
+    if t !== Py
+        other = auto_unbox(t, other_)
+        return py_cast(Py, op.op(self, other))
+    else
+        return G_PyBuiltin.NotImplemented
+    end
+end
+
+function (op::pyjlraw_op)(self, other_::Py, other2_::Py)
+    t1 = get(PyTypeDict, Py_Type(other_), Py)
+    t2 = get(PyTypeDict, Py_Type(other2_), Py)
+    if t1 !== Py && t2 !== Py
+        other = auto_unbox(t, other_)
+        other2 = auto_unbox(t, other2_)
+        return py_cast(Py, op.op(self, other, other2))
+    else
+        return G_PyBuiltin.NotImplemented
+    end
+end
+
+struct pyjlraw_revop{OP}
+    op :: OP
+end
+
+(op::pyjlraw_revop)(self) = py_cast(Py, op.op(self))
+
+function (op::pyjlraw_revop)(self, other_::Py)
+    py_tp = Py_Type(other_)
+    t = get(PyTypeDict, py_tp, Py)
+    if t !== Py
+        other = auto_unbox(t, other_)
+        return py_cast(Py, op.op(other, self))
+    else
+        return G_PyBuiltin.NotImplemented
+    end
+end
+
+function (op::pyjlraw_revop)(self, other_::Py, other2_::Py)
+    t1 = get(PyTypeDict, Py_Type(other_), Py)
+    t2 = get(PyTypeDict, Py_Type(other2_), Py)
+    if t1 !== Py && t2 !== Py
+        other = auto_unbox(t, other_)
+        other2 = auto_unbox(t, other2_)
+        return py_cast(Py, op.op(other, self, other2))
+    else
+        return G_PyBuiltin.NotImplemented
+    end
+end
+
 function pyjlraw_call(self, pyargs::Py, pykwargs::Py)
     nargs = PyAPI.PyTuple_Size(pyargs)
     nkwargs = PyAPI.PyDict_Size(pykwargs)
@@ -130,6 +188,84 @@ function init_jlraw()
             return ValueBase.__dir__(self) + self._jl_callmethod($(pyjl_methodnum(pyjlraw_dir)))
         def __call__(self, *args, **kwargs):
            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_call)), args, kwargs)
+        def __len__(self):
+           return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(length))))
+        def __pos__(self):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(+))))
+        def __neg__(self):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(-))))
+        def __abs__(self):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(abs))))
+        def __invert__(self):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(~))))
+        def __add__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(+))), other)
+        def __sub__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(-))), other)
+        def __mul__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(*))), other)
+        def __truediv__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(/))), other)
+        def __floordiv__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(÷))), other)
+        def __mod__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(%))), other)
+        def __pow__(self, other, modulo=None):
+            if modulo is None:
+                return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(^))), other)
+            else:
+                return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(powermod))), other, modulo)
+        def __lshift__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(<<))), other)
+        def __rshift__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(>>))), other)
+        def __and__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(&))), other)
+        def __xor__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(⊻))), other)
+        def __or__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(|))), other)
+        def __radd__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(+))), other)
+        def __rsub__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(-))), other)
+        def __rmul__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(*))), other)
+        def __rtruediv__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(/))), other)
+        def __rfloordiv__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(÷))), other)
+        def __rmod__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(%))), other)
+        def __rpow__(self, other, modulo=None):
+            if modulo is None:
+                return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(^))), other)
+            else:
+                return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(powermod))), other, modulo)
+        def __rlshift__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(<<))), other)
+        def __rrshift__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(>>))), other)
+        def __rand__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(&))), other)
+        def __rxor__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(⊻))), other)
+        def __ror__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(|))), other)
+        def __eq__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(==))), other)
+        def __ne__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(!=))), other)
+        def __le__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(≤))), other)
+        def __lt__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(<))), other)
+        def __ge__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(≥))), other)
+        def __gt__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(>))), other)
+        def __hash__(self):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(hash))))
         @property
         def __name__(self):
             return self._jl_callmethod($(pyjl_methodnum(pyjlraw_name)))
