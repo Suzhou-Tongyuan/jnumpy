@@ -13,33 +13,6 @@ const Py_METH_O = 0x0008       # single argument (not wrapped in tuple)
 const Py_METH_CLASS = 0x0010 # for class methods
 const Py_METH_STATIC = 0x0020 # for static methods
 
-# Flags for getting buffers
-const PyBUF_SIMPLE = 0x0
-const PyBUF_WRITABLE = 0x0001
-const PyBUF_WRITEABLE = PyBUF_WRITABLE
-const PyBUF_FORMAT = 0x0004
-const PyBUF_ND = 0x0008
-const PyBUF_STRIDES = (0x0010 | PyBUF_ND)
-const PyBUF_C_CONTIGUOUS = (0x0020 | PyBUF_STRIDES)
-const PyBUF_F_CONTIGUOUS = (0x0040 | PyBUF_STRIDES)
-const PyBUF_ANY_CONTIGUOUS = (0x0080 | PyBUF_STRIDES)
-const PyBUF_INDIRECT = (0x0100 | PyBUF_STRIDES)
-
-const PyBUF_CONTIG = (PyBUF_ND | PyBUF_WRITABLE)
-const PyBUF_CONTIG_RO = (PyBUF_ND)
-
-const PyBUF_STRIDED = (PyBUF_STRIDES | PyBUF_WRITABLE)
-const PyBUF_STRIDED_RO = (PyBUF_STRIDES)
-
-const PyBUF_RECORDS = (PyBUF_STRIDES | PyBUF_WRITABLE | PyBUF_FORMAT)
-const PyBUF_RECORDS_RO = (PyBUF_STRIDES | PyBUF_FORMAT)
-
-const PyBUF_FULL = (PyBUF_INDIRECT | PyBUF_WRITABLE | PyBUF_FORMAT)
-const PyBUF_FULL_RO = (PyBUF_INDIRECT | PyBUF_FORMAT)
-
-const PyBUF_READ = 0x100
-const PyBUF_WRITE = 0x200
-
 # the `value` field of `PyJuliaValueObject` indexes into here
 const PYJLVALUES = []
 # unused indices in PYJLVALUES
@@ -50,6 +23,20 @@ Py_Type(x::C.Ptr{PyObject}) = C.Ptr{PyObject}(x[].type)
 Py_Type(x::Py) = Py_Type(unsafe_unwrap(x))
 
 isflagset(flags, mask) = (flags & mask) == mask
+
+function handle_except(e::Exception)
+    # MethodError?
+    # could pyexception happends here?
+    if e isa PyException
+        CPython.PyAPI.PyErr_SetObject(e.type, e.value)
+    else
+        errmsg = capture_out() do
+            Base.showerror(stderr, e, catch_backtrace())
+        end
+        py_seterror!(G_JNUMPY.JuliaError, errmsg)
+    end
+    return Py_NULLPTR
+end
 
 function _pyjl_new(t::C.Ptr{PyObject}, ::C.Ptr{PyObject}, ::C.Ptr{PyObject})
     o = ccall(C.Ptr{PyTypeObject}(t).tp_alloc[], C.Ptr{PyObject}, (C.Ptr{PyObject}, Py_ssize_t), t, 0)
@@ -91,7 +78,6 @@ function _pyjl_callmethod(f, self_::C.Ptr{PyObject}, args_::C.Ptr{PyObject}, nar
     @nospecialize f
     if PyJuliaValue_IsNull(self_)
         py_seterror!(G_PyBuiltin.TypeError, "Julia object is NULL")
-        py_throw()
         return Py_NULLPTR
     end
     self = PyJuliaValue_GetValue(self_)
@@ -114,7 +100,6 @@ function _pyjl_callmethod(f, self_::C.Ptr{PyObject}, args_::C.Ptr{PyObject}, nar
             ans = py_cast(Py, f(self, arg1, arg2, arg3))
         else
             py_seterror!(G_PyBuiltin.TypeError, "__jl_callmethod not implemented for this many arguments")
-            py_throw()
         end
         out = unsafe_unwrap(ans)
         PyAPI.Py_IncRef(out)
@@ -159,7 +144,6 @@ function _pyjl_serialize(self::C.Ptr{PyObject}, ::C.Ptr{PyObject})
         return PyAPI.PyBytes_FromStringAndSize(C.Ptr{Int8}(pointer(b)), sizeof(b))
     catch
         py_seterror!(G_PyBuiltin.Exception, "error serializing this value")
-        py_throw()
         return Py_NULLPTR
     end
 end
@@ -175,7 +159,6 @@ function _pyjl_deserialize(t::C.Ptr{PyObject}, v::C.Ptr{PyObject})
         return PyJuliaValue_New(t, x)
     catch
         py_seterror!(G_PyBuiltin.Exception, "error deserializing this value")
-        py_throw()
         return Py_NULLPTR
     end
 end
@@ -221,6 +204,7 @@ const _pyjlbase_reduce_name = "__reduce__"
 const _pyjlbase_serialize_name = "_jl_serialize"
 const _pyjlbase_deserialize_name = "_jl_deserialize"
 const _pyjlbase_methods = Vector{PyMethodDef}()
+const _pyops = Vector{PyMethodDef}()
 # const _pyjlbase_as_buffer = fill(PyBufferProcs())
 const Py_TPFLAGS_BASETYPE = (0x00000001 << 10)
 const Py_TPFLAGS_HAVE_VERSION_TAG = (0x00000001 << 18)
@@ -311,22 +295,6 @@ const _pyop_op_map = (
     ("__ge__", :≥, 2),
     ("__gt__", :>, 2)
 )
-
-const _pyops = Vector{PyMethodDef}()
-
-function handle_except(e::Exception)
-    # MethodError?
-    # could pyexception happends here?
-    if e isa PyException
-        CPython.PyAPI.PyErr_SetObject(e.type, e.value)
-    else
-        errmsg = capture_out() do
-            Base.showerror(stderr, e, catch_backtrace())
-        end
-        py_seterror!(G_JNUMPY.JuliaError, errmsg)
-    end
-    return Py_NULLPTR
-end
 
 function gen_cfunc(pyfname::Symbol, op::Symbol, nargs::Val{1})
     quote
