@@ -1,4 +1,4 @@
-struct JLRawValue end
+struct JuliaRaw end
 const PyTypeDict = Dict{C.Ptr{PyObject}, Any}()
 const G_STRING_SYM_MAP = Dict{String, Symbol}()
 
@@ -44,35 +44,6 @@ function pyjlraw_setattr(self, k_::Py, v_::Py)
     py_cast(Py, nothing)
 end
 
-struct pyjlraw_op{OP}
-    op :: OP
-end
-
-(op::pyjlraw_op)(self) = py_cast(Py, op.op(self))
-
-function (op::pyjlraw_op)(self, other_::Py)
-    py_tp = Py_Type(other_)
-    t = get(PyTypeDict, py_tp, Py)
-    if t !== Py
-        other = auto_unbox(t, other_)
-        return py_cast(Py, op.op(self, other))
-    else
-        return G_PyBuiltin.NotImplemented
-    end
-end
-
-function (op::pyjlraw_op)(self, other_::Py, other2_::Py)
-    t1 = get(PyTypeDict, Py_Type(other_), Py)
-    t2 = get(PyTypeDict, Py_Type(other2_), Py)
-    if t1 !== Py && t2 !== Py
-        other = auto_unbox(t, other_)
-        other2 = auto_unbox(t, other2_)
-        return py_cast(Py, op.op(self, other, other2))
-    else
-        return G_PyBuiltin.NotImplemented
-    end
-end
-
 function pyjlraw_call(self, pyargs::Py, pykwargs::Py)
     nargs = PyAPI.PyTuple_Size(pyargs)
     nkwargs = PyAPI.PyDict_Size(pykwargs)
@@ -114,7 +85,7 @@ function auto_unbox(pyarg::Py)
 end
 
 function auto_unbox(::Type{T}, pyarg::Py) where T
-    if T === JLRawValue
+    if T === JuliaRaw
         return PyJuliaValue_GetValue(unsafe_unwrap(pyarg))
     else
         return py_coerce(T, pyarg)
@@ -124,7 +95,6 @@ end
 function init_typedict()
     pybuiltins = get_py_builtin()
     numpy = get_numpy()
-    # subclass?
     PyTypeDict[unsafe_unwrap(pybuiltins.None.__class__)] = Nothing
     PyTypeDict[unsafe_unwrap(pybuiltins.bool)] = Bool
     PyTypeDict[unsafe_unwrap(pybuiltins.int)] = Int64
@@ -132,14 +102,14 @@ function init_typedict()
     PyTypeDict[unsafe_unwrap(pybuiltins.str)] = String
     PyTypeDict[unsafe_unwrap(pybuiltins.complex)] = ComplexF64
     PyTypeDict[unsafe_unwrap(numpy.ndarray)] = AbstractArray
-    PyTypeDict[unsafe_unwrap(G_JNUMPY.RawValue)] = JLRawValue
+    PyTypeDict[unsafe_unwrap(G_JNUMPY.JuliaRaw)] = JuliaRaw
 end
 
-function init_jlwrap_raw()
+function init_jlraw()
     pybuiltins = get_py_builtin()
     pybuiltins.exec(pybuiltins.compile(py_cast(Py,"""
     $("\n"^(@__LINE__()-1))
-    class RawValue(ValueBase):
+    class JuliaRaw(JuliaBase):
         __slots__ = ()
         def __repr__(self):
             if self._jl_isnull():
@@ -160,23 +130,6 @@ function init_jlwrap_raw()
             return ValueBase.__dir__(self) + self._jl_callmethod($(pyjl_methodnum(pyjlraw_dir)))
         def __call__(self, *args, **kwargs):
            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_call)), args, kwargs)
-        def __len__(self):
-           return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(length))))
-        def __pos__(self):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(+))))
-        def __neg__(self):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(-))))
-        def __abs__(self):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(abs))))
-        def __invert__(self):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(~))))
-        def __pow__(self, other, modulo=None):
-            if modulo is None:
-                return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(^))), other)
-            else:
-                return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(powermod))), other, modulo)
-        def __hash__(self):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(hash))))
         @property
         def __name__(self):
             return self._jl_callmethod($(pyjl_methodnum(pyjlraw_name)))
@@ -185,7 +138,7 @@ end
 
 function pyjlraw(v)
     @nospecialize v
-    o = Py(PyJuliaValue_New(unsafe_unwrap(G_JNUMPY.RawValue), v))
+    o = Py(PyJuliaValue_New(unsafe_unwrap(G_JNUMPY.JuliaRaw), v))
     return o
 end
 

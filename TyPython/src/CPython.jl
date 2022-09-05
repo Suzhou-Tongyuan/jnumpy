@@ -72,8 +72,8 @@ include("CPython.Defs.jl")
 include("CPython.APIs.jl")
 include("CPython.Boot.jl")
 include("CPython.ORM.jl")
-include("CPython.Wrap.jl")
-include("CPython.RawValue.jl")
+include("CPython.JuliaBase.jl")
+include("CPython.JuliaRaw.jl")
 
 const G_ATTR_SYM_MAP = Dict{Symbol, Py}()
 const G_OB_POOL = Any[]
