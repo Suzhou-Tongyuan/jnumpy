@@ -47,7 +47,7 @@ const PYJLFREEVALUES = Int[]
 const PYJLMETHODS = Vector{Any}()
 
 Py_Type(x::C.Ptr{PyObject}) = C.Ptr{PyObject}(x[].type)
-Py_Type(x::Py) = Py_Type(getptr(x))
+Py_Type(x::Py) = Py_Type(unsafe_unwrap(x))
 
 isflagset(flags, mask) = (flags & mask) == mask
 
@@ -125,16 +125,16 @@ function _pyjl_callmethod(f, self_::C.Ptr{PyObject}, args_::C.Ptr{PyObject}, nar
             py_seterror!(G_PyBuiltin.TypeError, "__jl_callmethod not implemented for this many arguments")
             py_throw()
         end
-        out = getptr(ans)
+        out = unsafe_unwrap(ans)
         PyAPI.Py_IncRef(out)
         return out
     catch exc
         # todo: handle error
         if exc isa PyException
             Base.GC.@preserve exc PyAPI.PyErr_Restore(
-                PyAPI.Py_IncRef(getptr(exc.type)),
-                PyAPI.Py_IncRef(getptr(exc.value)),
-                PyAPI.Py_IncRef(getptr(exc.traceback))
+                PyAPI.Py_IncRef(unsafe_unwrap(exc.type)),
+                PyAPI.Py_IncRef(unsafe_unwrap(exc.value)),
+                PyAPI.Py_IncRef(unsafe_unwrap(exc.traceback))
                 )
             return Py_NULLPTR
         else
@@ -301,7 +301,7 @@ function init_valuebase()
 end
 
 function pyisjl(x::Py)
-    pyisjl(getptr(x))
+    pyisjl(unsafe_unwrap(x))
 end
 
 function pyisjl(x::C.Ptr{PyObject})
@@ -341,7 +341,7 @@ function gen_cfunc(pyfname::Symbol, op::Symbol)
                 other = $auto_unbox(t, $Py($BorrowReference(), other_))
                 try
                     out = $op(self, other)
-                    out = $getptr($py_cast($Py, out))
+                    out = $unsafe_unwrap($py_cast($Py, out))
                     $PyAPI.Py_IncRef(out)
                     return out
                 catch e
@@ -359,7 +359,7 @@ function gen_cfunc(pyfname::Symbol, op::Symbol)
                 end
             else
                 # return NotImplemented?
-                return $getptr(G_PyBuiltin.NotImplemented)
+                return $unsafe_unwrap(G_PyBuiltin.NotImplemented)
             end
         end
     end

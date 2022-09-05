@@ -47,10 +47,6 @@ function unsafe_set!(x::Py, p::C.Ptr{PyObject})
     nothing
 end
 
-function getptr(x::Py)
-    getfield(x, :ptr)
-end
-
 mutable struct PythonAPIStruct
     Py_Initialize::cfunc_t(Cvoid)
     Py_InitializeEx::cfunc_t(Cint, Cvoid)

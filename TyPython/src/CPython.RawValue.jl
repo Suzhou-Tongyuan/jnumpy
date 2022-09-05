@@ -115,7 +115,7 @@ end
 
 function auto_unbox(::Type{T}, pyarg::Py) where T
     if T === JLRawValue
-        return PyJuliaValue_GetValue(getptr(pyarg))
+        return PyJuliaValue_GetValue(unsafe_unwrap(pyarg))
     else
         return py_coerce(T, pyarg)
     end
@@ -125,14 +125,14 @@ function init_typedict()
     pybuiltins = get_py_builtin()
     numpy = get_numpy()
     # subclass?
-    PyTypeDict[getptr(pybuiltins.None.__class__)] = Nothing
-    PyTypeDict[getptr(pybuiltins.bool)] = Bool
-    PyTypeDict[getptr(pybuiltins.int)] = Int64
-    PyTypeDict[getptr(pybuiltins.float)] = Float64
-    PyTypeDict[getptr(pybuiltins.str)] = String
-    PyTypeDict[getptr(pybuiltins.complex)] = ComplexF64
-    PyTypeDict[getptr(numpy.ndarray)] = AbstractArray
-    PyTypeDict[getptr(G_JNUMPY.RawValue)] = JLRawValue
+    PyTypeDict[unsafe_unwrap(pybuiltins.None.__class__)] = Nothing
+    PyTypeDict[unsafe_unwrap(pybuiltins.bool)] = Bool
+    PyTypeDict[unsafe_unwrap(pybuiltins.int)] = Int64
+    PyTypeDict[unsafe_unwrap(pybuiltins.float)] = Float64
+    PyTypeDict[unsafe_unwrap(pybuiltins.str)] = String
+    PyTypeDict[unsafe_unwrap(pybuiltins.complex)] = ComplexF64
+    PyTypeDict[unsafe_unwrap(numpy.ndarray)] = AbstractArray
+    PyTypeDict[unsafe_unwrap(G_JNUMPY.RawValue)] = JLRawValue
 end
 
 function init_jlwrap_raw()
@@ -185,7 +185,7 @@ end
 
 function pyjlraw(v)
     @nospecialize v
-    o = Py(PyJuliaValue_New(getptr(G_JNUMPY.RawValue), v))
+    o = Py(PyJuliaValue_New(unsafe_unwrap(G_JNUMPY.RawValue), v))
     return o
 end
 
