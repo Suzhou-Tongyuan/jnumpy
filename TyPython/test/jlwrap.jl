@@ -14,6 +14,7 @@ pyPoint = py_cast(Py, Point)
 @testset "jl -> JuliaRaw" begin
     @test pyisjl(pya)
     @test !(pyisjl(py_cast(Py, 1)))
+    @test pya._jl_deserialize(pya._jl_serialize()).x == py_cast(Py, 1)
     @test repr(pya) == "Py(<jl Point(1, 2)>)"
     @test pya.__class__ == CPython.G_JNUMPY.JuliaRaw
     @test pya.x == py_cast(Py, 1)
@@ -22,4 +23,5 @@ pyPoint = py_cast(Py, Point)
     pya.x = py_cast(Py, 3)
     @test a.x == 3
     @test py_cast(Int, pya.__dir__().__len__()) > 0
+    @test_throws CPython.PyException pya.__add__(pya)
 end

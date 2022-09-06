@@ -187,7 +187,6 @@ end
 function PyJuliaValue_New(t::C.Ptr{PyObject}, @nospecialize(v))
     if PyAPI.PyType_IsSubtype(t, PyJuliaBase_Type[]) != 1
         py_seterror!(G_PyBuiltin.TypeError, "Expecting a subtype of 'jnumpy.JuliaBase'")
-        py_throw()
         return Py_NULLPTR
     end
     o = PyAPI.PyObject_CallObject(t, Py_NULLPTR)
