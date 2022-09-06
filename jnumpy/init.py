@@ -1,6 +1,7 @@
 from __future__ import annotations
 import io
 import os
+import sys
 import subprocess
 import ctypes
 import shlex
@@ -129,13 +130,12 @@ def init_jl():
     try:
         os.chdir(os.path.dirname(os.path.abspath(libpath)))
         lib = ctypes.PyDLL(libpath, mode=ctypes.RTLD_GLOBAL)
-        print("pydll")
         try:
             init_func = lib.jl_init_with_image
         except AttributeError:
             init_func = lib.jl_init_with_image__threading
 
-        argc, argv = args_from_config(SessionCtx.JULIA_EXE, jl_opts)
+        argc, argv = args_from_config(SessionCtx.JULIA_EXE, SessionCtx.JULIA_START_OPTIONS)
         lib.jl_parse_opts(ctypes.pointer(argc), ctypes.pointer(argv))
 
         init_func.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
