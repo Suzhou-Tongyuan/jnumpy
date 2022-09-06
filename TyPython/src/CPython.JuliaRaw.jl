@@ -185,7 +185,7 @@ function init_jlraw()
             else:
                 self._jl_callmethod($(pyjl_methodnum(pyjlraw_setattr)), k, v)
         def __dir__(self):
-            return ValueBase.__dir__(self) + self._jl_callmethod($(pyjl_methodnum(pyjlraw_dir)))
+            return JuliaBase.__dir__(self) + self._jl_callmethod($(pyjl_methodnum(pyjlraw_dir)))
         def __call__(self, *args, **kwargs):
            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_call)), args, kwargs)
         def __len__(self):
