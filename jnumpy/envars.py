@@ -14,6 +14,9 @@ TyPython_directory = (
     pathlib.Path(__file__).parent.absolute().joinpath("TyPython").as_posix()
 )
 
+DefaultProj_directory = (
+    pathlib.Path(__file__).parent.absolute().joinpath("JNumPyEnv").as_posix()
+)
 
 InitTools_path = (
     pathlib.Path(__file__).parent.absolute().joinpath("InitTools.jl").as_posix()

@@ -67,7 +67,7 @@ def get_default_julia_exe() -> str:
 
 
 def get_project_args():
-    default_envs_dir = os.path.join(get_jnumpy_dir(), "envs/default")
+    default_envs_dir = envars.DefaultProj_directory
     return f"--project={default_envs_dir}"
 
 
