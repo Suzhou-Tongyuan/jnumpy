@@ -128,7 +128,8 @@ def init_jl():
     old_cwd = os.getcwd()
     try:
         os.chdir(os.path.dirname(os.path.abspath(libpath)))
-        lib = ctypes.CDLL(libpath, mode=ctypes.RTLD_GLOBAL)
+        lib = ctypes.PyDLL(libpath, mode=ctypes.RTLD_GLOBAL)
+        print("pydll")
         try:
             init_func = lib.jl_init_with_image
         except AttributeError:
