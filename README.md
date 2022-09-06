@@ -91,7 +91,7 @@ Note that JNumPy will install julia in `JNUMPY_HOME` for you, if there is no Jul
 
 - `JNUMPY_HOME`:
 
-    The home directory for JNumPy-specific settings. The default value is `~/.jnumpy`. JNumPy runs julia in a default environment (`$JNUMPY_HOME/envs/default`). In case that you don't have a julia executable, JNumPy installs julia into `$JNUMPY_HOME` using [jill.py](https://github.com/johnnychen94/jill.py).
+    The home directory for JNumPy-specific settings. The default value is `~/.jnumpy`. In case that you don't have a julia executable, JNumPy installs julia into `$JNUMPY_HOME` using [jill.py](https://github.com/johnnychen94/jill.py).
 
 - `TYPY_JL_EXE`:
 
@@ -99,7 +99,7 @@ Note that JNumPy will install julia in `JNUMPY_HOME` for you, if there is no Jul
 
 - `TYPY_JL_OPTS`:
 
-    Command-line options when launching julia. If you want to use a custom environment, you could set `--project=<dir>`. `TYPY_JL_OPTS` is the same as those arguments passed to `julia`.
+    Command-line options when launching julia. JNumPy runs julia in a default environment (`path/to/package/jnumpy/JNumPyEnv`). If you want to use a custom environment, you could set `--project=<dir>`. `TYPY_JL_OPTS` is the same as those arguments passed to `julia`.
 
 ## Examples
 
