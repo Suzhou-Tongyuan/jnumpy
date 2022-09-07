@@ -22,8 +22,6 @@ const PYJLMETHODS = Vector{Any}()
 Py_Type(x::C.Ptr{PyObject}) = C.Ptr{PyObject}(x[].type)
 Py_Type(x::Py) = Py_Type(unsafe_unwrap(x))
 
-isflagset(flags, mask) = (flags & mask) == mask
-
 function handle_except(e::Exception)
     # MethodError?
     # could pyexception happends here?
