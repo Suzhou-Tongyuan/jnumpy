@@ -340,6 +340,6 @@ function py_cast(::Type{Py}, o::Py)
     return o
 end
 
-function py_cast(::Type{Py}, o::T) where T <: AbstractArray
+function py_cast(::Type{Py}, o::T) where {T <: AbstractArray{<:Number}}
     py_coerce(Py, o)
 end
