@@ -158,7 +158,7 @@ end
     py_coerce(::Type{Py}, xs::AbstractArray)
 
 Convert julia array to numpy ndarray.
-Array, Transpose of Array, PermutedDimsArray of Array and some SubArray could be converted to ndarray without copy,
+Array, Transpose of Array, PermutedDimsArray of Array and some SubArray/ReinterpretArray could be converted to ndarray without copy,
 other arrays will first be copied with `collect()`, then converted to ndarray.
 """
 function py_coerce(::Type{Py}, @nospecialize(xs::AbstractArray))
