@@ -32,6 +32,17 @@ function _errormsg_argmismatch(argc::Integer, nargs::Integer)
     return "expected $nargs arguments, got $argc."
 end
 
+_to_py_error(::Exception) = G_PyBuiltin.RuntimeError
+_to_py_error(::MethodError) = G_PyBuiltin.TypeError
+_to_py_error(::BoundsError) = G_PyBuiltin.IndexError
+_to_py_error(::KeyError) = G_PyBuiltin.KeyError
+_to_py_error(::ArgumentError) = G_PyBuiltin.ValueError
+_to_py_error(::DimensionMismatch) = G_PyBuiltin.ValueError
+_to_py_error(::UndefVarError) = G_PyBuiltin.NameError
+_to_py_error(::EOFError) = G_PyBuiltin.EOFError
+_to_py_error(::OutOfMemoryError) = G_PyBuiltin.MemoryError
+_to_py_error(::OverflowError) = G_PyBuiltin.OverflowError
+
 const PyPtr = Ptr{PyObject}
 
 function export_py(__module__::Module, __source__::LineNumberNode, fi::FuncInfo)
@@ -99,7 +110,7 @@ function export_py(__module__::Module, __source__::LineNumberNode, fi::FuncInfo)
                 msg = $Utils.capture_out() do
                     $Base.showerror(stderr, e, $catch_backtrace())
                 end
-                $CPython.PyAPI.PyErr_SetObject($CPython.G_PyBuiltin.RuntimeError, $py_cast($Py, msg))
+                $CPython.PyAPI.PyErr_SetObject($_to_py_error(e), $py_cast($Py, msg))
             end
             return $Py_NULLPTR
         end
