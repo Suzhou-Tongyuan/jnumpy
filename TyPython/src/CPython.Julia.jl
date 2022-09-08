@@ -67,8 +67,8 @@ function get_typekind(_::Union{ComplexF16, ComplexF32, ComplexF64})
     return Cchar('c')
 end
 
-function DynamicArray(x::TArray) where TArray<:AbstractArray
-    et = eltype(TArray)
+function DynamicArray(x::AbstractArray)
+    et = eltype(x)
     typekind = get_typekind(zero(et))
     if x isa LinearAlgebra.Transpose && parent(x) isa StridedArray
         return LinearAlgebra.transpose(DynamicArray(LinearAlgebra.transpose(x)))
@@ -81,6 +81,8 @@ function DynamicArray(x::TArray) where TArray<:AbstractArray
         x
     elseif x isa StridedArray && x isa SubArray
         is_f_style = Base.iscontiguous(x)
+        x
+    elseif x isa StridedArray && x isa Base.ReinterpretArray && parent(x) isa Array
         x
     else
         collect(x)
