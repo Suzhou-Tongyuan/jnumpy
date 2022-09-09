@@ -95,7 +95,7 @@ function DynamicArray(x::TArray) where TArray<:AbstractArray
     itemsize = convert(Cint, sizeof(et))
     np_strides = Py_ssize_t[ itemsize * d for d in strides(normalized_x) ]
     perm = Tuple(0:ndim-1)
-    DynamicArray(x, et, shape, np_strides, ptr, ndim, itemsize, typekind, is_c_style, is_f_style, false, perm)
+    DynamicArray(normalized_x, et, shape, np_strides, ptr, ndim, itemsize, typekind, is_c_style, is_f_style, false, perm)
 end
 
 # handle GC
