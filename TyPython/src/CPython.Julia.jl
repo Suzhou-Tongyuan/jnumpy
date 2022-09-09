@@ -51,6 +51,10 @@ function get_perm(x::PermutedDimsArray{T, N, perm}) where {T, N, perm}
     return perm .- 1
 end
 
+function get_typekind(_::Bool)
+    return Cchar('b')
+end
+
 function get_typekind(_::Union{Int8, Int16, Int32, Int64})
     return Cchar('i')
 end

@@ -57,8 +57,15 @@ def test_mat_mul(dtype):
     y = np.asarray([[7.8, 5e-3], [6.75, 8.234]], dtype=dtype)
     actual = mat_mul(x, y)
     desired = x @ y
+    assert actual.dtype == desired.dtype
     np.testing.assert_array_almost_equal(actual, desired, decimal=5)
 
+def test_bool_array():
+    x = np.asarray([[True, False], [True, False]])
+    x_int = x.astype('i')
+    actual = mat_mul(x, x)
+    desired = x_int @ x_int
+    assert np.all(actual == desired)
 
 def test_set_zero():
     x = np.random.rand(2)

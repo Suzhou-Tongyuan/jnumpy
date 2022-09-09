@@ -167,6 +167,11 @@ end
         e = np.random.random(py_cast(Py, (1, 10, 1, 1)))
         @test py_cast(AbstractArray, e) isa Array
     end
+    @testset "bool array" begin
+        f = rand(Bool, 2, 2)
+        py_f = py_cast(Py, f)
+        @test py_f.dtype == np.dtype(py_cast(Py, "bool"))
+    end
     @testset "SubArray and ReinterpretArray" begin
         x = rand(4, 4)
         x_sub = @view x[2:4, :]

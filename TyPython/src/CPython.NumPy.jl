@@ -42,7 +42,7 @@ function get_numpy()
     return G_numpy
 end
 
-const supported_kinds = Cchar['i', 'u', 'f', 'c']
+const supported_kinds = Cchar['b', 'i', 'u', 'f', 'c']
 
 const SupportedNDim = 32  # hard coded in numpy
 const ShapeType = Union{(Tuple{repeat([Py_intptr_t], i)...} for i = 0:SupportedNDim)...}
@@ -108,6 +108,9 @@ function from_ndarray(x::Py)
     end
 
     arr = @switch (Char(info.typekind), Int(info.itemsize)) begin
+        @case ('b', 1)
+            register_root(x,
+                unsafe_wrap(Array, convert(Ptr{Bool}, info.data), shape; own=false))
         @case ('i', 1)
             register_root(x,
                 unsafe_wrap(Array, convert(Ptr{Int8}, info.data), shape; own=false))
