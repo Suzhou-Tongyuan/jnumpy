@@ -2,7 +2,7 @@ module CPython
 using MLStyle: @match, @switch
 import LinearAlgebra
 import TyPython.C
-import TyPython.Utils: capture_out, unroll_do!
+import TyPython.Utils: capture_out, unroll_do!, @suppress_error
 export get_numpy, get_py_builtin, py_throw, WITH_GIL, GILNoRaise
 export py_cast, py_coerce
 export Py
