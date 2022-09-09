@@ -172,6 +172,19 @@ end
         py_f = py_cast(Py, f)
         @test py_f.dtype == np.dtype(py_cast(Py, "bool"))
     end
+    @testset "SubArray and ReinterpretArray" begin
+        x = rand(4, 4)
+        x_sub = @view x[2:4, :]
+        py_x_sub = py_cast(Py, x_sub)
+        @test py_cast(Tuple{Int, Int}, py_x_sub.shape) == (3, 4)
+        @test py_cast(Float64, py_x_sub[py_cast(Py, (0,0))]) == x_sub[1, 1]
+        @test !py_cast(Bool, py_x_sub.flags.c_contiguous)
+        @test !py_cast(Bool, py_x_sub.flags.f_contiguous)
+        x_re = reinterpret(ComplexF64, x)
+        py_x_re = py_cast(Py, x_re)
+        @test py_cast(Tuple{Int, Int}, py_x_re.shape) == (2, 4)
+        @test pointer(py_cast(Array, py_x_re)) == pointer(x)
+    end
     @test_throws CPython.PyException py_cast(Array, py_cast(Py, "abc"))
 end
 

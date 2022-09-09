@@ -71,8 +71,22 @@ function get_typekind(_::Union{ComplexF16, ComplexF32, ComplexF64})
     return Cchar('c')
 end
 
-function DynamicArray(x::TArray) where TArray<:AbstractArray
-    et = eltype(TArray)
+function _normalized_array(x::AbstractArray, is_f_style)
+    normalized_x = if x isa Array
+        x
+    elseif x isa StridedArray && x isa SubArray
+        is_f_style = Base.iscontiguous(x)
+        x
+    elseif x isa StridedArray && x isa Base.ReinterpretArray && parent(x) isa Array
+        x
+    else
+        collect(x)
+    end
+    return normalized_x, is_f_style
+end
+
+function DynamicArray(x::AbstractArray)
+    et = eltype(x)
     typekind = get_typekind(zero(et))
     if x isa LinearAlgebra.Transpose && parent(x) isa StridedArray
         return LinearAlgebra.transpose(DynamicArray(LinearAlgebra.transpose(x)))
@@ -81,14 +95,7 @@ function DynamicArray(x::TArray) where TArray<:AbstractArray
     end
     is_c_style = false
     is_f_style = true
-    normalized_x = if x isa Array
-        x
-    elseif x isa StridedArray && x isa SubArray
-        is_f_style = Base.iscontiguous(x)
-        x
-    else
-        collect(x)
-    end
+    normalized_x, is_f_style = _normalized_array(x, is_f_style)
     shape = collect(Py_ssize_t, size(normalized_x))
     ptr = reinterpret(Ptr{Cvoid}, pointer(normalized_x))
     ndim = convert(Cint, ndims(normalized_x))
@@ -160,7 +167,7 @@ end
     py_coerce(::Type{Py}, xs::AbstractArray)
 
 Convert julia array to numpy ndarray.
-Array, Transpose of Array, PermutedDimsArray of Array and some SubArray could be converted to ndarray without copy,
+Array, Transpose of Array, PermutedDimsArray of Array and some SubArray/ReinterpretArray could be converted to ndarray without copy,
 other arrays will first be copied with `collect()`, then converted to ndarray.
 """
 function py_coerce(::Type{Py}, @nospecialize(xs::AbstractArray))
