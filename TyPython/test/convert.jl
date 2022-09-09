@@ -167,6 +167,11 @@ end
         e = np.random.random(py_cast(Py, (1, 10, 1, 1)))
         @test py_cast(AbstractArray, e) isa Array
     end
+    @testset "bool array" begin
+        f = rand(Bool, 2, 2)
+        py_f = py_cast(Py, f)
+        @test py_f.dtype == np.dtype(py_cast(Py, "bool"))
+    end
     @test_throws CPython.PyException py_cast(Array, py_cast(Py, "abc"))
 end
 
