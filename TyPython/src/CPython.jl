@@ -13,6 +13,18 @@ const CF_TYPY_PY_APIPTR = "TYPY_PY_APIPTR"
 const CF_TYPY_PY_DLL = "TYPY_PY_DLL"
 const CF_TYPY_MODE_PYTHON = "PYTHON-BASED"
 const CF_TYPY_MODE_JULIA = "JULIA-BASED"
+const CF_TYPY_PID = "TYPY_PID"
+
+function check_pid()
+    if haskey(ENV, CF_TYPY_PID)
+        if ENV[CF_TYPY_PID] !== string(Base.getpid())
+            return false
+        end
+    else
+        ENV[CF_TYPY_PID] = string(Base.getpid())
+    end
+    return true
+end
 
 mutable struct Configuration
     IS_DEAD::Bool

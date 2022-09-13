@@ -13,6 +13,7 @@ from .envars import (
     CF_TYPY_MODE,
     CF_TYPY_MODE_JULIA,
     CF_TYPY_MODE_PYTHON,
+    CF_TYPY_PID,
     CF_TYPY_PY_APIPTR,
     TyPython_directory,
     InitTools_path,
@@ -100,10 +101,18 @@ def init_jl():
         return
     elif os.getenv(CF_TYPY_MODE) == CF_TYPY_MODE_PYTHON:
         assert os.getenv(CF_TYPY_PY_APIPTR, str(ctypes.pythonapi._handle))
+        try:
+            assert os.getenv(CF_TYPY_PID) == str(os.getpid())
+        except AssertionError:
+            raise Exception(
+                f"The environment variables {CF_TYPY_PY_APIPTR} inherited from the parent process is invalid."
+            )
         return
     elif not os.getenv(CF_TYPY_MODE):
         os.environ[CF_TYPY_MODE] = CF_TYPY_MODE_PYTHON
         os.environ[CF_TYPY_PY_APIPTR] = str(ctypes.pythonapi._handle)
+        if not os.getenv(CF_TYPY_PID):
+            os.environ[CF_TYPY_PID] = str(os.getpid())
     else:
         raise Exception("Unknown mode: " + (os.getenv(CF_TYPY_MODE) or "<unset>"))
 

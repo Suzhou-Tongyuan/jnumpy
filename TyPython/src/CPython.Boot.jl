@@ -24,8 +24,12 @@ end
 function init()
     RT_is_initialized() && return
     if haskey(ENV, CF_TYPY_PY_APIPTR)
-        ptr = reinterpret(Ptr{Cvoid}, parse(UInt, ENV[CF_TYPY_PY_APIPTR]))
-        init(ptr)
+        if check_pid()
+            ptr = reinterpret(Ptr{Cvoid}, parse(UInt, ENV[CF_TYPY_PY_APIPTR]))
+            init(ptr)
+        else
+            error("The environment variables $(CF_TYPY_PY_APIPTR) inherited from the parent process is invalid.")
+        end
     elseif haskey(ENV, CF_TYPY_PY_DLL)
         cwd = pwd()
         try
