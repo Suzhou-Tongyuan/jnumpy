@@ -17,6 +17,7 @@ from .envars import (
     TyPython_directory,
     InitTools_path,
     SessionCtx,
+    jl_opts_parse,
 )
 
 # XXX: adding an environment variable for fast debugging:
@@ -94,7 +95,8 @@ class JuliaError(Exception):
     pass
 
 
-def init_jl():
+def init_jl(experimental_fast_init=False):
+    # if experimental_fast_init is True, assume TyPython is included in sysimage
     global _eval_jl
     if os.getenv(CF_TYPY_MODE) == CF_TYPY_MODE_JULIA:
         return
@@ -110,10 +112,10 @@ def init_jl():
     setup_julia_exe_()
     jl_opts = shlex.split(os.getenv(CF_TYPY_JL_OPTS, ""))
     jl_opts_proj = get_project_args()
+    opts, unkown_opts = jl_opts_parse.parse_known_args([jl_opts_proj, *jl_opts])
     cmd = [
         SessionCtx.JULIA_EXE,
-        jl_opts_proj,
-        *jl_opts,
+        *unkown_opts,
         "--startup-file=no",
         "-O0",
         "--compile=min",
@@ -123,9 +125,11 @@ def init_jl():
     bindir, libpath, sysimage, default_project_dir = subprocess.run(
         cmd, check=True, capture_output=True, encoding="utf8"
     ).stdout.splitlines()
-    SessionCtx.JULIA_START_OPTIONS = [jl_opts_proj, *jl_opts]
+    SessionCtx.JULIA_START_OPTIONS = unkown_opts
     SessionCtx.DEFAULT_PROJECT_DIR = default_project_dir
 
+    if opts.sysimage:
+        sysimage = opts.sysimage
     old_cwd = os.getcwd()
     try:
         os.chdir(os.path.dirname(os.path.abspath(libpath)))
@@ -159,40 +163,54 @@ def init_jl():
                     raise JuliaError(ef.getvalue())
                 return None
 
-        exec_julia(
-            f"""
-            import Pkg
-            Pkg.activate({escape_to_julia_rawstr(default_project_dir)}, io=devnull)
-            include({escape_to_julia_rawstr(InitTools_path)})
-        """,
-            use_gil=False,
-        )
-
-        try:
-            exec_julia("import TyPython", use_gil=False)
-        except JuliaError:
+        if experimental_fast_init:
             try:
                 exec_julia(
-                    f"InitTools.setup_environment({escape_to_julia_rawstr(TyPython_directory)})",
+                    f"""
+                    import Pkg
+                    Pkg.activate({escape_to_julia_rawstr(default_project_dir)}, io=devnull)
+                    include({escape_to_julia_rawstr(InitTools_path)})
+                    TyPython.CPython.init()
+                """,
                     use_gil=False,
                 )
             except JuliaError:
-                pass
+                raise RuntimeError("invalid julia initialization")
+        else:
             exec_julia(
-                f"InitTools.force_resolve({escape_to_julia_rawstr(TyPython_directory)})",
-                use_gil=False,
-            )
-        try:
-            exec_julia(
-                rf"""
-                import TyPython
-                import TyPython.CPython
-                TyPython.CPython.init()
+                f"""
+                import Pkg
+                Pkg.activate({escape_to_julia_rawstr(default_project_dir)}, io=devnull)
+                include({escape_to_julia_rawstr(InitTools_path)})
             """,
                 use_gil=False,
             )
-        except JuliaError:
-            raise RuntimeError("invalid julia initialization")
+
+            try:
+                exec_julia("import TyPython", use_gil=False)
+            except JuliaError:
+                try:
+                    exec_julia(
+                        f"InitTools.setup_environment({escape_to_julia_rawstr(TyPython_directory)})",
+                        use_gil=False,
+                    )
+                except JuliaError:
+                    pass
+                exec_julia(
+                    f"InitTools.force_resolve({escape_to_julia_rawstr(TyPython_directory)})",
+                    use_gil=False,
+                )
+            try:
+                exec_julia(
+                    rf"""
+                    import TyPython
+                    import TyPython.CPython
+                    TyPython.CPython.init()
+                """,
+                    use_gil=False,
+                )
+            except JuliaError:
+                raise RuntimeError("invalid julia initialization")
 
     finally:
         os.chdir(old_cwd)
