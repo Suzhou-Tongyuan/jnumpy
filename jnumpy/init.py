@@ -104,9 +104,10 @@ def init_jl():
         try:
             assert os.getenv(CF_TYPY_PID) == str(os.getpid())
         except AssertionError:
-            raise Exception(
-                f"The environment variables {CF_TYPY_PY_APIPTR} inherited from the parent process is invalid."
-            )
+            del os.environ[CF_TYPY_MODE]
+            del os.environ[CF_TYPY_PY_APIPTR]
+            del os.environ[CF_TYPY_PID]
+            init_jl()
         return
     elif not os.getenv(CF_TYPY_MODE):
         os.environ[CF_TYPY_MODE] = CF_TYPY_MODE_PYTHON

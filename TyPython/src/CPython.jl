@@ -19,11 +19,13 @@ function check_pid()
     if haskey(ENV, CF_TYPY_PID)
         if ENV[CF_TYPY_PID] !== string(Base.getpid())
             return false
+        else
+            return true
         end
     else
-        ENV[CF_TYPY_PID] = string(Base.getpid())
+        error("undefined environment variable: $CF_TYPY_PID, while $CF_TYPY_PY_APIPTR is defined")
     end
-    return true
+    return
 end
 
 mutable struct Configuration

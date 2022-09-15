@@ -28,9 +28,13 @@ function init()
             ptr = reinterpret(Ptr{Cvoid}, parse(UInt, ENV[CF_TYPY_PY_APIPTR]))
             init(ptr)
         else
-            error("The environment variables $(CF_TYPY_PY_APIPTR) inherited from the parent process is invalid.")
+            pop!(ENV, CF_TYPY_PY_APIPTR)
+            pop!(ENV, CF_TYPY_PID)
+            init()
         end
-    elseif haskey(ENV, CF_TYPY_PY_DLL)
+        return
+    end
+    if haskey(ENV, CF_TYPY_PY_DLL)
         cwd = pwd()
         try
             ptr = load_pydll!(ENV[CF_TYPY_PY_DLL])
