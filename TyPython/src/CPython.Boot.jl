@@ -30,7 +30,9 @@ function init_jlwrap()
     init_jlraw()
     init_typedict()
     pyMain = py_cast(Py, Main)
+    pyBase = py_cast(Py, Base)
     G_JNUMPY.Main = pyMain
+    G_JNUMPY.Base = pyBase
 end
 
 function init()

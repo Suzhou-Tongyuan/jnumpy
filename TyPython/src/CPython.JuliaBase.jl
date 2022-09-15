@@ -23,7 +23,6 @@ Py_Type(x::C.Ptr{PyObject}) = C.Ptr{PyObject}(x[].type)
 Py_Type(x::Py) = Py_Type(unsafe_unwrap(x))
 
 function handle_except(e::Exception)
-    # MethodError?
     # could pyexception happends here?
     if e isa PyException
         CPython.PyAPI.PyErr_SetObject(e.type, e.value)
@@ -31,7 +30,7 @@ function handle_except(e::Exception)
         errmsg = capture_out() do
             Base.showerror(stderr, e, catch_backtrace())
         end
-        py_seterror!(G_JNUMPY.JuliaError, errmsg)
+        py_seterror!(_to_py_error(e), errmsg)
     end
     return Py_NULLPTR
 end
