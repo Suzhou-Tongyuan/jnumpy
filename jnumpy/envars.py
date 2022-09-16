@@ -30,4 +30,4 @@ class SessionCtx:
     JULIA_START_OPTIONS: list[str]
 
 jl_opts_parse = argparse.ArgumentParser()
-jl_opts_parse.add_argument("-J", "--sysimage")
+jl_opts_parse.add_argument("-J", "--sysimage", type=str, default=None)
