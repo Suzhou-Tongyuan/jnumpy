@@ -1,6 +1,7 @@
 from __future__ import annotations
 import io
 import os
+import pathlib
 import sys
 import subprocess
 import ctypes
@@ -141,7 +142,8 @@ def init_jl(experimental_fast_init=False):
     SessionCtx.DEFAULT_PROJECT_DIR = default_project_dir
 
     if experimental_fast_init and opts.sysimage:
-        sysimage = opts.sysimage
+        sysimage_abs_paths = pathlib.Path(opts.sysimage).absolute().as_posix()
+        sysimage = sysimage_abs_paths
     old_cwd = os.getcwd()
     try:
         os.chdir(os.path.dirname(os.path.abspath(libpath)))
