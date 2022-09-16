@@ -10,6 +10,7 @@ CF_TYPY_MODE_JULIA = "JULIA-BASED"
 CF_TYPY_JL_EXE = "TYPY_JL_EXE"
 CF_TYPY_JL_OPTS = "TYPY_JL_OPTS"
 CF_JNUMPY_HOME = "JNUMPY_HOME"
+CF_TYPY_PID = "TYPY_PID"
 
 TyPython_directory = (
     pathlib.Path(__file__).parent.absolute().joinpath("TyPython").as_posix()

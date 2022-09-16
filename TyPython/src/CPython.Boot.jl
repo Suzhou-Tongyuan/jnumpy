@@ -24,9 +24,17 @@ end
 function init()
     RT_is_initialized() && return
     if haskey(ENV, CF_TYPY_PY_APIPTR)
-        ptr = reinterpret(Ptr{Cvoid}, parse(UInt, ENV[CF_TYPY_PY_APIPTR]))
-        init(ptr)
-    elseif haskey(ENV, CF_TYPY_PY_DLL)
+        if check_pid()
+            ptr = reinterpret(Ptr{Cvoid}, parse(UInt, ENV[CF_TYPY_PY_APIPTR]))
+            init(ptr)
+        else
+            pop!(ENV, CF_TYPY_PY_APIPTR)
+            pop!(ENV, CF_TYPY_PID)
+            init()
+        end
+        return
+    end
+    if haskey(ENV, CF_TYPY_PY_DLL)
         cwd = pwd()
         try
             ptr = load_pydll!(ENV[CF_TYPY_PY_DLL])
