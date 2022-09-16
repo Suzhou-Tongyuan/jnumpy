@@ -9,6 +9,8 @@ from jnumpy.tests.extension import (
     set_zero,
     jl_fft,
 )
+import os
+import subprocess
 import numpy as np
 import pytest
 
@@ -78,3 +80,15 @@ def test_fft():
     actual = jl_fft(x)
     desired = np.fft.fft(x)
     np.testing.assert_array_almost_equal(actual, desired)
+
+def test_subprocess():
+    assert os.getenv("TYPY_PY_APIPTR")
+    cmd = [
+        "python",
+        "-c",
+        "import jnumpy as np; np.init_jl(); np.exec_julia(\"print(1)\")"
+    ]
+    out = subprocess.run(
+        cmd, check=True, capture_output=True, encoding="utf8"
+    )
+    assert out.stdout == "1"
