@@ -1,6 +1,7 @@
 from __future__ import annotations
 import io
 import os
+import pathlib
 import sys
 import subprocess
 import ctypes
@@ -18,6 +19,7 @@ from .envars import (
     TyPython_directory,
     InitTools_path,
     SessionCtx,
+    jl_opts_parse,
 )
 
 # XXX: adding an environment variable for fast debugging:
@@ -95,7 +97,8 @@ class JuliaError(Exception):
     pass
 
 
-def init_jl():
+def init_jl(experimental_fast_init=False):
+    # if experimental_fast_init is True, assume TyPython is included in sysimage
     global _eval_jl
     if os.getenv(CF_TYPY_MODE) == CF_TYPY_MODE_JULIA:
         return
@@ -120,22 +123,37 @@ def init_jl():
     setup_julia_exe_()
     jl_opts = shlex.split(os.getenv(CF_TYPY_JL_OPTS, ""))
     jl_opts_proj = get_project_args()
-    cmd = [
-        SessionCtx.JULIA_EXE,
-        jl_opts_proj,
-        *jl_opts,
-        "--startup-file=no",
-        "-O0",
-        "--compile=min",
-        "-e",
-        julia_info_query,
-    ]
+    opts, unkown_opts = jl_opts_parse.parse_known_args([jl_opts_proj, *jl_opts]) # parse arg --sysimage or -J
+    if experimental_fast_init:
+        cmd = [
+            SessionCtx.JULIA_EXE,
+            *unkown_opts,
+            "--startup-file=no",
+            "-O0",
+            "--compile=min",
+            "-e",
+            julia_info_query,
+        ]
+    else:
+        cmd = [
+            SessionCtx.JULIA_EXE,
+            jl_opts_proj,
+            *jl_opts,
+            "--startup-file=no",
+            "-O0",
+            "--compile=min",
+            "-e",
+            julia_info_query,
+        ]
     bindir, libpath, sysimage, default_project_dir = subprocess.run(
         cmd, check=True, capture_output=True, encoding="utf8"
     ).stdout.splitlines()
-    SessionCtx.JULIA_START_OPTIONS = [jl_opts_proj, *jl_opts]
+    SessionCtx.JULIA_START_OPTIONS = unkown_opts
     SessionCtx.DEFAULT_PROJECT_DIR = default_project_dir
 
+    if experimental_fast_init and opts.sysimage:
+        sysimage_abs_paths = pathlib.Path(opts.sysimage).absolute().as_posix()
+        sysimage = sysimage_abs_paths
     old_cwd = os.getcwd()
     try:
         os.chdir(os.path.dirname(os.path.abspath(libpath)))
