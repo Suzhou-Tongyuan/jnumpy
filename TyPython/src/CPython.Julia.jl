@@ -10,7 +10,7 @@ struct DynamicArray
     is_c_style :: Bool
     is_f_style :: Bool
     need_permute :: Bool
-    perm :: ShapeType
+    perm :: NTuple{N, Int} where N
 end
 
 const G_arrayinfo = Union{DynamicArray, Nothing}[]
