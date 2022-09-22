@@ -80,5 +80,10 @@ function init(ptr :: Ptr{Cvoid})
         if PyAPI.Py_AtExit(@cfunction(_atpyexit, Cvoid, ())) == -1
             @warn "Py_AtExit() error"
         end
+        if !is_calling_julia_from_python()
+            sys = py_import("sys")
+            sys.argv.append(py_cast(Py, "python"))
+            nothing
+        end
     end
 end
