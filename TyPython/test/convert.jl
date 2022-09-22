@@ -180,6 +180,9 @@ end
         @test py_cast(Float64, py_x_sub[py_cast(Py, (0,0))]) == x_sub[1, 1]
         @test !py_cast(Bool, py_x_sub.flags.c_contiguous)
         @test !py_cast(Bool, py_x_sub.flags.f_contiguous)
+        x_sub_copy = py_cast(AbstractArray, py_x_sub)
+        @test x_sub_copy isa Array
+        @test pointer(x_sub_copy) != pointer(x_sub)
         x_re = reinterpret(ComplexF64, x)
         py_x_re = py_cast(Py, x_re)
         @test py_cast(Tuple{Int, Int}, py_x_re.shape) == (2, 4)
