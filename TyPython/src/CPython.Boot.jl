@@ -40,9 +40,17 @@ end
 function init()
     RT_is_initialized() && return
     if haskey(ENV, CF_TYPY_PY_APIPTR)
-        ptr = reinterpret(Ptr{Cvoid}, parse(UInt, ENV[CF_TYPY_PY_APIPTR]))
-        init(ptr)
-    elseif haskey(ENV, CF_TYPY_PY_DLL)
+        if check_pid()
+            ptr = reinterpret(Ptr{Cvoid}, parse(UInt, ENV[CF_TYPY_PY_APIPTR]))
+            init(ptr)
+        else
+            pop!(ENV, CF_TYPY_PY_APIPTR)
+            pop!(ENV, CF_TYPY_PID)
+            init()
+        end
+        return
+    end
+    if haskey(ENV, CF_TYPY_PY_DLL)
         cwd = pwd()
         try
             ptr = load_pydll!(ENV[CF_TYPY_PY_DLL])
@@ -87,6 +95,11 @@ function init(ptr :: Ptr{Cvoid})
         init_values!(G_PyBuiltin)
         if PyAPI.Py_AtExit(@cfunction(_atpyexit, Cvoid, ())) == -1
             @warn "Py_AtExit() error"
+        end
+        if !is_calling_julia_from_python()
+            sys = py_import("sys")
+            sys.argv.append(py_cast(Py, "python"))
+            nothing
         end
     end
 end

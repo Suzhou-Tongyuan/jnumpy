@@ -138,8 +138,11 @@ mutable struct PythonAPIStruct
     PyEval_EvalCode::cfunc_t(C.Ptr{PyObject}, C.Ptr{PyObject}, C.Ptr{PyObject}, Except(Py_NULLPTR, C.Ptr{PyObject}))
     Py_CompileString::cfunc_t(Cstring, Cstring, Cint, Except(Py_NULLPTR, C.Ptr{PyObject}))
 
+    PyCapsule_Type::C.Ptr{PyObject}
+    PyCapsule_SetDestructor::cfunc_t(C.Ptr{PyObject}, Ptr{Cvoid}, Cint)
     PyCapsule_GetPointer::cfunc_t(C.Ptr{PyObject}, Cstring, Ptr{Cvoid})
     PyCapsule_GetName::cfunc_t(C.Ptr{PyObject}, Cstring)
+    PyCapsule_SetName::cfunc_t(C.Ptr{PyObject}, Cstring, Cint)
     PyCapsule_New::cfunc_t(Ptr{Cvoid}, Cstring, Ptr{Cvoid}, C.Ptr{PyObject})
     PyObject_ClearWeakRefs::cfunc_t(C.Ptr{PyObject}, Cvoid)
     PyCFunction_NewEx::cfunc_t(Ptr{Cvoid}, Ptr{Cvoid}, Ptr{Cvoid}, Except(Py_NULLPTR, C.Ptr{PyObject}))

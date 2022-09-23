@@ -97,6 +97,7 @@ function from_ndarray(x::Py)
         __array_struct__ = x.__array_struct__
         ptr = C.Ptr{PyArrayInterface}(_get_capsule_ptr(__array_struct__))
         info = ptr[] :: PyArrayInterface
+        flags = info.flags
     end
 
     # TODO: exception check
