@@ -225,7 +225,7 @@ function _init_jlraw()
             return self._jl_callmethod($(pyjl_methodnum(pyjlraw_getattr)), k)
         def __setattr__(self, k, v):
             self._jl_callmethod($(pyjl_methodnum(pyjlraw_setattr)), k, v)
-        def __getitem__(self, k, v):
+        def __getitem__(self, k):
             return self._jl_callmethod($(pyjl_methodnum(pyjlraw_getitem)), k)
         def __setitem__(self, k, v):
             return self._jl_callmethod($(pyjl_methodnum(pyjlraw_setitem)), k, v)
