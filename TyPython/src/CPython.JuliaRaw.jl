@@ -1,4 +1,5 @@
 struct JuliaRaw end
+struct PyTuple end
 const PyTypeDict = Dict{C.Ptr{PyObject}, Any}()
 const G_STRING_SYM_MAP = Dict{String, Symbol}()
 
@@ -12,11 +13,11 @@ pyjlraw_repr(self) = py_cast(Py, "<jl $(repr(self))>")
 pyjlraw_name(self) = attribute_symbol_to_pyobject(nameof(self))
 
 function pyjlraw_dir(self)
-    py_list = G_PyBuiltin.list()
+    dir_list = G_PyBuiltin.list()
     for k in propertynames(self, true)
-        py_list.append(attribute_symbol_to_pyobject(k))
+        dir_list.append(attribute_symbol_to_pyobject(k))
     end
-    return py_list
+    return dir_list
 end
 
 function pyjlraw_dir(self::Module)
@@ -25,11 +26,11 @@ function pyjlraw_dir(self::Module)
     for m in ccall(:jl_module_usings, Any, (Any,), self)::Vector
         append!(ks, names(m))
     end
-    py_list = G_PyBuiltin.list()
+    dir_list = G_PyBuiltin.list()
     for k in ks
-        py_list.append(attribute_symbol_to_pyobject(k))
+        dir_list.append(attribute_symbol_to_pyobject(k))
     end
-    return py_list
+    return dir_list
 end
 
 function pyjlraw_getattr(self, k_::Py)
@@ -43,6 +44,46 @@ function pyjlraw_setattr(self, k_::Py, v_::Py)
     setproperty!(self, k, v)
     py_cast(Py, nothing)
 end
+
+function pyjlraw_getitem(self, item::Py)::Py
+    py_tp = Py_Type(item)
+    t = get(PyTypeDict, py_tp, Py)
+    if t <: PyTuple
+        py_cast(Py, getindex(self, auto_unbox(item)...))
+    else
+        py_cast(Py, getindex(self, auto_unbox(item)))
+    end
+end
+
+function pyjlraw_setitem(self, item::Py, val::Py)::Py
+    py_tp = Py_Type(item)
+    t = get(PyTypeDict, py_tp, Py)
+    if t <: PyTuple
+        setindex!(
+            self,
+            auto_unbox(val),
+            auto_unbox(item)...)
+    else
+        setindex!(
+            self,
+            auto_unbox(val),
+            auto_unbox(item))
+    end
+    return py_cast(Py, nothing)
+end
+
+function pyjlraw_bool(self)
+    if self isa Number
+        return py_cast(Bool, o != 0)
+    end
+    if (self isa AbstractArray || self isa AbstractDict ||
+        self isa AbstractSet || self isa AbstractString)
+        return py_cast(Bool, !isempty(o))
+    end
+    # return `true` is the default semantics of a Python object
+    return py_cast(Bool, true)
+end
+
 
 struct pyjlraw_op{OP}
     op :: OP
@@ -106,18 +147,18 @@ function pyjlraw_call(self, pyargs::Py, pykwargs::Py)
     nargs = PyAPI.PyTuple_Size(pyargs)
     nkwargs = PyAPI.PyDict_Size(pykwargs)
     if nkwargs > 0
-        args = auto_unbox_tuple(pyargs)
-        kwargs = auto_unbox_dict(pykwargs)
+        args = auto_unbox_args(pyargs)
+        kwargs = auto_unbox_kwargs(pykwargs)
         return py_cast(Py, self(args...; kwargs...))
     elseif nargs > 0
-        args = auto_unbox_tuple(pyargs)
+        args = auto_unbox_args(pyargs)
         return py_cast(Py, self(args...))
     else
         return py_cast(Py, self())
     end
 end
 
-function auto_unbox_tuple(pyargs::Py)
+function auto_unbox_args(pyargs::Py)
     args = Any[]
     py_for(pyargs) do item
         push!(args, auto_unbox(item))
@@ -125,13 +166,13 @@ function auto_unbox_tuple(pyargs::Py)
     return args
 end
 
-function auto_unbox_dict(pykwargs::Py)
-    kwargs = Dict{Symbol, Any}()
+function auto_unbox_kwargs(pykwargs::Py)
+    kwargs = Pair{Symbol, Any}[]
     py_for(pykwargs.items()) do item
         pyk = Py(BorrowReference(), PyAPI.PyTuple_GetItem(item, 0))
         pyv = Py(BorrowReference(), PyAPI.PyTuple_GetItem(item, 1))
         k = Symbol(py_coerce(String, pyk))
-        kwargs[k] = auto_unbox(pyv)
+        push!(kwargs, k => auto_unbox(pyv))
     end
     return kwargs
 end
@@ -150,10 +191,16 @@ function auto_unbox(::Type{T}, pyarg::Py) where T
     end
 end
 
-function init_typedict()
+function auto_unbox(::Type{PyTuple}, pyarg::Py)
+    n = length(py)
+    return Tuple(auto_unbox(pyarg[py_cast(Py, i-1)]) for i in 1:n)
+end
+
+function _init_typedict()
     pybuiltins = get_py_builtin()
     numpy = get_numpy()
     PyTypeDict[unsafe_unwrap(pybuiltins.None.__class__)] = Nothing
+    PyTypeDict[unsafe_unwrap(pybuiltins.tuple)] = PyTuple
     PyTypeDict[unsafe_unwrap(pybuiltins.bool)] = Bool
     PyTypeDict[unsafe_unwrap(pybuiltins.int)] = Int64
     PyTypeDict[unsafe_unwrap(pybuiltins.float)] = Float64
@@ -163,7 +210,7 @@ function init_typedict()
     PyTypeDict[unsafe_unwrap(G_JNUMPY.JuliaRaw)] = JuliaRaw
 end
 
-function init_jlraw()
+function _init_jlraw()
     pybuiltins = get_py_builtin()
     pybuiltins.exec(pybuiltins.compile(py_cast(Py,"""
     $("\n"^(@__LINE__()-1))
@@ -175,15 +222,13 @@ function init_jlraw()
             else:
                 return self._jl_callmethod($(pyjl_methodnum(pyjlraw_repr)))
         def __getattr__(self, k):
-            if k.startswith("__") and k.endswith("__"):
-                raise AttributeError(k)
-            else:
-                return self._jl_callmethod($(pyjl_methodnum(pyjlraw_getattr)), k)
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_getattr)), k)
         def __setattr__(self, k, v):
-            if k.startswith("__") and k.endswith("__"):
-                raise AttributeError(k)
-            else:
-                self._jl_callmethod($(pyjl_methodnum(pyjlraw_setattr)), k, v)
+            self._jl_callmethod($(pyjl_methodnum(pyjlraw_setattr)), k, v)
+        def __getitem__(self, k, v):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_getitem)), k)
+        def __setitem__(self, k, v):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_setitem)), k, v)
         def __dir__(self):
             return JuliaBase.__dir__(self) + self._jl_callmethod($(pyjl_methodnum(pyjlraw_dir)))
         def __call__(self, *args, **kwargs):
@@ -266,6 +311,8 @@ function init_jlraw()
             return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(>))), other)
         def __hash__(self):
             return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(hash))))
+        def __bool__(self):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_bool)))
         @property
         def __name__(self):
             return self._jl_callmethod($(pyjl_methodnum(pyjlraw_name)))

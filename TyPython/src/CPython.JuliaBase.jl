@@ -205,7 +205,7 @@ const _pyops = Vector{PyMethodDef}()
 const Py_TPFLAGS_BASETYPE = (0x00000001 << 10)
 const Py_TPFLAGS_HAVE_VERSION_TAG = (0x00000001 << 18)
 
-function init_juliabase()
+function _init_juliabase()
     empty!(_pyjlbase_methods)
     push!(_pyjlbase_methods,
         PyMethodDef(
