@@ -313,6 +313,12 @@ function _init_jlraw()
             return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(hash))))
         def __bool__(self):
             return self._jl_callmethod($(pyjl_methodnum(pyjlraw_bool)))
+        def __iter__(self):
+            pair = self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(iterate))))
+            while pair is not None:
+                element, state = pair
+                yield element
+                pair = self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(iterate))), state)
         @property
         def __name__(self):
             return self._jl_callmethod($(pyjl_methodnum(pyjlraw_name)))

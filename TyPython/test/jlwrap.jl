@@ -14,6 +14,20 @@ function test_dealloc()
     temp = py_cast(Py, Point(rand(); y=rand()))
     nothing
 end
+Base.firstindex(p::Point) = 1
+Base.lastindex(p::Point) = 2
+function Base.getindex(p::Point, i::Int)
+    1 <= i <= 2 || throw(BoundsError(p, i))
+    i == 1 ? p.x : p.y
+end
+function Base.setindex!(p::Point, v, i::Int)
+    1 <= i <= 2 || throw(BoundsError(p, i))
+    if i == 1
+        p.x = v
+    else
+        p.y = v
+    end
+end
 
 @testset "JuliaBase" begin
     @test pyisjl(pya)
@@ -36,4 +50,7 @@ end
     @test py_cast(Int, py_cast(Py, CPython).__dir__().__len__()) > 0
     @test py_cast(String, py_cast(Py, CPython).__name__) == "CPython"
     @test_throws CPython.PyException pya.__add__(pya)
+    @test pya[py_cast(Py, 1)] == py_cast(Py, 3)
+    pya[py_cast(Py, 1)] = py_cast(Py, 1)
+    @test pya[py_cast(Py, 1)] == py_cast(Py, 1)
 end
