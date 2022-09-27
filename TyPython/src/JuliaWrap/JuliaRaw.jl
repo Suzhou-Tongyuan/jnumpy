@@ -1,8 +1,8 @@
 struct JuliaRaw end
 struct PyTuple end
 const PyTypeDict = Dict{C.Ptr{PyObject}, Any}()
-const G_STRING_SYM_MAP = Dict{String, Symbol}()
 
+const G_STRING_SYM_MAP = Dict{String, Symbol}()
 function attribute_string_to_symbol(x::String)
     get!(G_STRING_SYM_MAP, x) do
         Symbol(x)
@@ -59,29 +59,23 @@ function pyjlraw_setitem(self, item::Py, val::Py)::Py
     py_tp = Py_Type(item)
     t = get(PyTypeDict, py_tp, Py)
     if t <: PyTuple
-        setindex!(
-            self,
-            auto_unbox(val),
-            auto_unbox(item)...)
+        setindex!(self, auto_unbox(val), auto_unbox(item)...)
     else
-        setindex!(
-            self,
-            auto_unbox(val),
-            auto_unbox(item))
+        setindex!(self, auto_unbox(val), auto_unbox(item))
     end
     return py_cast(Py, nothing)
 end
 
 function pyjlraw_bool(self)
     if self isa Number
-        return py_cast(Bool, o != 0)
+        return py_cast(Py, o != 0)
     end
     if (self isa AbstractArray || self isa AbstractDict ||
         self isa AbstractSet || self isa AbstractString)
-        return py_cast(Bool, !isempty(o))
+        return py_cast(Py, !isempty(o))
     end
     # return `true` is the default semantics of a Python object
-    return py_cast(Bool, true)
+    return py_cast(Py, true)
 end
 
 
@@ -97,18 +91,6 @@ function (op::pyjlraw_op)(self, other_::Py)
     if t !== Py
         other = auto_unbox(t, other_)
         return py_cast(Py, op.op(self, other))
-    else
-        return G_PyBuiltin.NotImplemented
-    end
-end
-
-function (op::pyjlraw_op)(self, other_::Py, other2_::Py)
-    t1 = get(PyTypeDict, Py_Type(other_), Py)
-    t2 = get(PyTypeDict, Py_Type(other2_), Py)
-    if t1 !== Py && t2 !== Py
-        other = auto_unbox(t, other_)
-        other2 = auto_unbox(t, other2_)
-        return py_cast(Py, op.op(self, other, other2))
     else
         return G_PyBuiltin.NotImplemented
     end
@@ -131,48 +113,37 @@ function (op::pyjlraw_revop)(self, other_::Py)
     end
 end
 
-function (op::pyjlraw_revop)(self, other_::Py, other2_::Py)
-    t1 = get(PyTypeDict, Py_Type(other_), Py)
-    t2 = get(PyTypeDict, Py_Type(other2_), Py)
-    if t1 !== Py && t2 !== Py
-        other = auto_unbox(t, other_)
-        other2 = auto_unbox(t, other2_)
-        return py_cast(Py, op.op(other, self, other2))
-    else
-        return G_PyBuiltin.NotImplemented
-    end
-end
-
 function pyjlraw_call(self, pyargs::Py, pykwargs::Py)
     nargs = PyAPI.PyTuple_Size(pyargs)
     nkwargs = PyAPI.PyDict_Size(pykwargs)
     if nkwargs > 0
-        args = auto_unbox_args(pyargs)
-        kwargs = auto_unbox_kwargs(pykwargs)
+        args = auto_unbox_args(pyargs, nargs)
+        kwargs = auto_unbox_kwargs(pykwargs, nkwargs)
         return py_cast(Py, self(args...; kwargs...))
     elseif nargs > 0
-        args = auto_unbox_args(pyargs)
+        args = auto_unbox_args(pyargs, nargs)
         return py_cast(Py, self(args...))
     else
         return py_cast(Py, self())
     end
 end
 
-function auto_unbox_args(pyargs::Py)
-    args = Any[]
-    py_for(pyargs) do item
-        push!(args, auto_unbox(item))
+function auto_unbox_args(pyargs::Py, nargs::Int)
+    args = Vector{Any}(undef, nargs)
+    for i in 1:nargs
+        args[i] = auto_unbox(Py(BorrowReference(), PyAPI.PyTuple_GetItem(pyargs, i-1)))
     end
     return args
 end
 
-function auto_unbox_kwargs(pykwargs::Py)
+function auto_unbox_kwargs(pykwargs::Py, nkwargs::Int)
     kwargs = Pair{Symbol, Any}[]
-    py_for(pykwargs.items()) do item
-        pyk = Py(BorrowReference(), PyAPI.PyTuple_GetItem(item, 0))
-        pyv = Py(BorrowReference(), PyAPI.PyTuple_GetItem(item, 1))
-        k = Symbol(py_coerce(String, pyk))
-        push!(kwargs, k => auto_unbox(pyv))
+    pyk = PyAPI.PyDict_Keys(pykwargs)
+    pyv = PyAPI.PyDict_Values(pykwargs)
+    for i in 1:nkwargs
+        k = auto_unbox(Py(BorrowReference(), PyAPI.PyList_GetItem(pyk, i-1)))
+        v = auto_unbox(Py(BorrowReference(), PyAPI.PyList_GetItem(pyv, i-1)))
+        push!(kwargs, attribute_string_to_symbol(k) => v)
     end
     return kwargs
 end
@@ -192,7 +163,7 @@ function auto_unbox(::Type{T}, pyarg::Py) where T
 end
 
 function auto_unbox(::Type{PyTuple}, pyarg::Py)
-    n = length(py)
+    n = length(pyarg)
     return Tuple(auto_unbox(pyarg[py_cast(Py, i-1)]) for i in 1:n)
 end
 
@@ -207,7 +178,7 @@ function _init_typedict()
     PyTypeDict[unsafe_unwrap(pybuiltins.str)] = String
     PyTypeDict[unsafe_unwrap(pybuiltins.complex)] = ComplexF64
     PyTypeDict[unsafe_unwrap(numpy.ndarray)] = AbstractArray
-    PyTypeDict[unsafe_unwrap(G_JNUMPY.JuliaRaw)] = JuliaRaw
+    PyTypeDict[unsafe_unwrap(G_jnumpy.JuliaRaw)] = JuliaRaw
 end
 
 function _init_jlraw()
@@ -255,11 +226,8 @@ function _init_jlraw()
             return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(÷))), other)
         def __mod__(self, other):
             return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(%))), other)
-        def __pow__(self, other, modulo=None):
-            if modulo is None:
-                return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(^))), other)
-            else:
-                return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(powermod))), other, modulo)
+        def __pow__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(^))), other)
         def __lshift__(self, other):
             return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(<<))), other)
         def __rshift__(self, other):
@@ -282,11 +250,8 @@ function _init_jlraw()
             return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(÷))), other)
         def __rmod__(self, other):
             return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(%))), other)
-        def __rpow__(self, other, modulo=None):
-            if modulo is None:
-                return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(^))), other)
-            else:
-                return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(powermod))), other, modulo)
+        def __rpow__(self, other):
+            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(^))), other)
         def __rlshift__(self, other):
             return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(<<))), other)
         def __rrshift__(self, other):
@@ -322,12 +287,12 @@ function _init_jlraw()
         @property
         def __name__(self):
             return self._jl_callmethod($(pyjl_methodnum(pyjlraw_name)))
-    """), py_cast(Py,@__FILE__()), py_cast(Py, "exec")), G_JNUMPY.__dict__)
+    """), py_cast(Py,@__FILE__()), py_cast(Py, "exec")), G_jnumpy.__dict__)
 end
 
 function pyjlraw(v)
     @nospecialize v
-    o = Py(PyJuliaValue_New(unsafe_unwrap(G_JNUMPY.JuliaRaw), v))
+    o = Py(PyJuliaValue_New(unsafe_unwrap(G_jnumpy.JuliaRaw), v))
     return o
 end
 
@@ -336,4 +301,8 @@ pyjlraw(v::Py) = v
 function py_cast(::Type{Py}, o)
     @nospecialize o
     pyjlraw(o)
+end
+
+function jl_evaluate(s::String)
+    Base.eval(Main, Base.Meta.parseall(s))
 end

@@ -41,6 +41,7 @@ end
 
 @testset "JuliaRaw" begin
     @test repr(pya) == "Py(<jl Point(1, 2)>)"
+    @test py_cast(Bool, pya.__bool__())
     @test pya.x == py_cast(Py, 1)
     @test py_cast(Bool, pya.__mul__(pya).__eq__(py_cast(Py, Point(1; y=4))))
     @test pyPoint(py_cast(Py, 1); y=py_cast(Py, 2)).y == py_cast(Py, 2)
@@ -53,4 +54,11 @@ end
     @test pya[py_cast(Py, 1)] == py_cast(Py, 3)
     pya[py_cast(Py, 1)] = py_cast(Py, 1)
     @test pya[py_cast(Py, 1)] == py_cast(Py, 1)
+end
+
+@testset "PythonAPI" begin
+    jnp = CPython.py_import("jnumpy")
+    @test repr(jnp.Base) == "Py(<jl Base>)"
+    @test repr(jnp.Main) == "Py(<jl Main>)"
+    @test jnp.jl_eval(py_cast(Py, "1+1")) == py_cast(Py, 2)
 end

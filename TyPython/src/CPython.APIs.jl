@@ -112,6 +112,9 @@ mutable struct PythonAPIStruct
     PyDict_Size::cfunc_t(C.Ptr{PyObject}, Py_ssize_t)
     PyDict_Next::cfunc_t(C.Ptr{PyObject}, Ptr{Py_ssize_t}, Ptr{C.Ptr{PyObject}}, Ptr{C.Ptr{PyObject}}, Cint)
     PyDict_Type::C.Ptr{PyObject}
+    PyDict_Keys::cfunc_t(C.Ptr{PyObject}, C.Ptr{PyObject})
+    PyDict_Values::cfunc_t(C.Ptr{PyObject}, C.Ptr{PyObject})
+    PyList_GetItem::cfunc_t(C.Ptr{PyObject}, Py_ssize_t, Except(Py_NULLPTR, C.Ptr{PyObject}))
 
     PyIter_Next::cfunc_t(C.Ptr{PyObject}, C.Ptr{PyObject})
 

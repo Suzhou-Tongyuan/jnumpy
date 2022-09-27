@@ -1,10 +1,14 @@
 import Serialization
 
 # define class JuliaBase and JuliaRaw in module jnumpy.
-const G_JNUMPY = Py(UnsafeNew())
-const juliabasetype = Py(UnsafeNew())
+const G_jnumpy = Py(UnsafeNew())
+const PyJuliaBase_Type = Py(UnsafeNew())
 
-const PyJuliaBase_Type = Ref{C.Ptr{PyObject}}(C_NULL)
+function _init_jnumpy()
+    jnp = PyAPI.PyImport_ImportModule("jnumpy")
+    PyAPI.Py_IncRef(jnp)
+    unsafe_set!(G_jnumpy, jnp)
+end
 
 const Py_METH_VARARGS = 0x0001 # args are a tuple of arguments
 const Py_METH_KEYWORDS = 0x0002  # two arguments: the varargs and the kwargs
@@ -23,7 +27,6 @@ Py_Type(x::C.Ptr{PyObject}) = C.Ptr{PyObject}(x[].type)
 Py_Type(x::Py) = Py_Type(unsafe_unwrap(x))
 
 function handle_except(e::Exception)
-    # could pyexception happends here?
     if e isa PyException
         CPython.PyAPI.PyErr_SetObject(e.type, e.value)
     else
@@ -82,10 +85,8 @@ function _pyjl_callmethod(f, self_::C.Ptr{PyObject}, args_::C.Ptr{PyObject}, nar
         if nargs == 1
             ans = f(self)::Py
         elseif nargs == 2
-            arg1 = Py(BorrowReference(), PyAPI.PyTuple_GetItem(args_, 1)) # Borrowed reference here. incref?
+            arg1 = Py(BorrowReference(), PyAPI.PyTuple_GetItem(args_, 1))
             ans = f(self, arg1)::Py
-            # pydel!(arg1)
-            # cache?
         elseif nargs == 3
             arg1 = Py(BorrowReference(), PyAPI.PyTuple_GetItem(args_, 1))
             arg2 = Py(BorrowReference(), PyAPI.PyTuple_GetItem(args_, 2))
@@ -182,7 +183,7 @@ function PyJuliaValue_SetValue(o::C.Ptr{PyObject}, @nospecialize(v))
 end
 
 function PyJuliaValue_New(t::C.Ptr{PyObject}, @nospecialize(v))
-    if PyAPI.PyType_IsSubtype(t, PyJuliaBase_Type[]) != 1
+    if PyAPI.PyType_IsSubtype(t, PyJuliaBase_Type) != 1
         py_seterror!(G_PyBuiltin.TypeError, "Expecting a subtype of 'jnumpy.JuliaBase'")
         return Py_NULLPTR
     end
@@ -201,7 +202,6 @@ const _pyjlbase_serialize_name = "_jl_serialize"
 const _pyjlbase_deserialize_name = "_jl_deserialize"
 const _pyjlbase_methods = Vector{PyMethodDef}()
 const _pyops = Vector{PyMethodDef}()
-# const _pyjlbase_as_buffer = fill(PyBufferProcs())
 const Py_TPFLAGS_BASETYPE = (0x00000001 << 10)
 const Py_TPFLAGS_HAVE_VERSION_TAG = (0x00000001 << 18)
 
@@ -244,13 +244,14 @@ function _init_juliabase()
             tp_flags = Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_VERSION_TAG,
             tp_weaklistoffset = fieldoffset(PyJuliaValueObject, 3),
             tp_methods = pointer(_pyjlbase_methods),
-            # tp_as_buffer = pointer(_pyjlbase_as_buffer) # todo
         )
 
-    o = PyJuliaBase_Type[] = C.Ptr{PyObject}(pointer(_pyjlbase_type))
+    o = C.Ptr{PyObject}(pointer(_pyjlbase_type))
     if PyAPI.PyType_Ready(o) == -1
         error("Error initializing 'jnumpy.JuliaBase'")
     end
+    PyAPI.Py_IncRef(o)
+    unsafe_set!(PyJuliaBase_Type, o)
 end
 
 function pyisjl(x::Py)
@@ -259,5 +260,5 @@ end
 
 function pyisjl(x::C.Ptr{PyObject})
     tpx = Py_Type(x)
-    PyAPI.PyType_IsSubtype(tpx, juliabasetype) == 1
+    PyAPI.PyType_IsSubtype(tpx, PyJuliaBase_Type) == 1
 end

@@ -22,18 +22,17 @@ function load_pydll!(dllpath::AbstractString)
 end
 
 function init_jlwrap()
-    # todo: make sure we have jnumpy
+    _init_jnumpy()
     _init_juliabase()
-    jnp = PyAPI.PyImport_ImportModule("jnumpy")
-    unsafe_set!(G_JNUMPY, jnp)
-    unsafe_set!(juliabasetype, PyJuliaBase_Type[])
-    G_JNUMPY.JuliaBase = juliabasetype
+    G_jnumpy.JuliaBase = PyJuliaBase_Type
     _init_jlraw()
     _init_typedict()
     pyMain = py_cast(Py, Main)
     pyBase = py_cast(Py, Base)
-    G_JNUMPY.Main = pyMain
-    G_JNUMPY.Base = pyBase
+    pyjl_eval = py_cast(Py, jl_evaluate)
+    G_jnumpy.Main = pyMain
+    G_jnumpy.Base = pyBase
+    G_jnumpy.jl_eval = pyjl_eval
     nothing
 end
 

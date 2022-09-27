@@ -75,7 +75,7 @@ jobs:
             ${{ runner.os }}-
 
       - name: run pytest
-        run: python -m pytest ./jnumpy/tests/test_core.py
+        run: python -m pytest jnumpy
 
       - name: Run Julia package tests
         uses: julia-actions/julia-runtest@v1
