@@ -38,6 +38,18 @@ function handle_except(e::Exception)
     return Py_NULLPTR
 end
 
+function handle_except(e::Exception, pyerr::Py)
+    if e isa PyException
+        CPython.PyAPI.PyErr_SetObject(e.type, e.value)
+    else
+        errmsg = capture_out() do
+            Base.showerror(stderr, e, catch_backtrace())
+        end
+        py_seterror!(pyerr, errmsg)
+    end
+    return Py_NULLPTR
+end
+
 function _pyjl_new(t::C.Ptr{PyObject}, ::C.Ptr{PyObject}, ::C.Ptr{PyObject})
     o = ccall(C.Ptr{PyTypeObject}(t).tp_alloc[], C.Ptr{PyObject}, (C.Ptr{PyObject}, Py_ssize_t), t, 0)
     o == Py_NULLPTR && return Py_NULLPTR
@@ -193,6 +205,86 @@ function PyJuliaValue_New(t::C.Ptr{PyObject}, @nospecialize(v))
     return o
 end
 
+function pyjl_repr(self_::C.Ptr{PyObject})
+    if PyJuliaValue_IsNull(self_)
+        ans = py_cast(Py, "<jl NULL>")
+        out = unsafe_unwrap(ans)
+        PyAPI.Py_IncRef(out)
+        return out
+    end
+    self = PyJuliaValue_GetValue(self_)
+    try
+        ans = py_cast(Py, "<jl $(repr(self))>")
+        out = unsafe_unwrap(ans)
+        PyAPI.Py_IncRef(out)
+        return out
+    catch e
+        handle_except(e)
+    end
+end
+
+function pyjl_call(self_::C.Ptr{PyObject}, pyargs::C.Ptr{PyObject}, pykwargs::C.Ptr{PyObject})
+    if PyJuliaValue_IsNull(self_)
+        py_seterror!(G_PyBuiltin.TypeError, "Julia object is NULL")
+        return Py_NULLPTR
+    end
+    self = PyJuliaValue_GetValue(self_)
+    nargs = PyAPI.PyTuple_Size(pyargs)
+    try
+        if pykwargs !== Py_NULLPTR
+            nkwargs = PyAPI.PyDict_Size(pykwargs)
+            args = auto_unbox_args(Py(BorrowReference(),pyargs), nargs)
+            kwargs = auto_unbox_kwargs(Py(BorrowReference(), pykwargs), nkwargs)
+            ans = py_cast(Py, self(args...; kwargs...))
+        elseif nargs > 0
+            args = auto_unbox_args(Py(BorrowReference(), pyargs), nargs)
+            ans = py_cast(Py, self(args...))
+        else
+            ans = py_cast(Py, self())
+        end
+        out  = unsafe_unwrap(ans)
+        PyAPI.Py_IncRef(out)
+        return out
+    catch e
+        handle_except(e)
+    end
+end
+
+# function pyjl_getattr(self_::C.Ptr{PyObject}, k_::C.Ptr{PyObject})
+#     if PyJuliaValue_IsNull(self_)
+#         py_seterror!(G_PyBuiltin.TypeError, "Julia object is NULL")
+#         return Py_NULLPTR
+#     end
+#     self = PyJuliaValue_GetValue(self_)
+#     try
+#         k = attribute_string_to_symbol(py_coerce(String, Py(BorrowReference(), k_)))
+#         ans = py_cast(Py, getproperty(self, k))
+#         out = unsafe_unwrap(ans)
+#         PyAPI.Py_IncRef(out)
+#         return out
+#     catch e
+#         handle_except(e, G_PyBuiltin.AttributeError)
+#     end
+# end
+
+# function pyjl_setattr(self_::C.Ptr{PyObject}, k_::C.Ptr{PyObject}, v_::C.Ptr{PyObject})
+#     if PyJuliaValue_IsNull(self_)
+#         py_seterror!(G_PyBuiltin.TypeError, "Julia object is NULL")
+#         return Py_NULLPTR
+#     end
+#     self = PyJuliaValue_GetValue(self_)
+#     try
+#         k = attribute_string_to_symbol(py_coerce(String, Py(BorrowReference(), k_)))
+#         v = auto_unbox(Py(BorrowReference(), v_))
+#         setproperty!(self, k, v)
+#         out = unsafe_unwrap(PyAPI.Py_None)
+#         PyAPI.Py_IncRef(out)
+#         return out
+#     catch e
+#         handle_except(e, G_PyBuiltin.AttributeError)
+#     end
+# end
+
 const _pyjlbase_name = "jnumpy.JuliaBase"
 const _pyjlbase_type = fill(PyTypeObject())
 const _pyjlbase_isnull_name = "_jl_isnull"
@@ -200,6 +292,8 @@ const _pyjlbase_callmethod_name = "_jl_callmethod"
 const _pyjlbase_reduce_name = "__reduce__"
 const _pyjlbase_serialize_name = "_jl_serialize"
 const _pyjlbase_deserialize_name = "_jl_deserialize"
+const _pyjlbase_getattr_name = "_jl_getattr"
+const _pyjlbase_setattr_name = "_jl_setattr"
 const _pyjlbase_methods = Vector{PyMethodDef}()
 const _pyops = Vector{PyMethodDef}()
 const Py_TPFLAGS_BASETYPE = (0x00000001 << 10)
@@ -207,6 +301,8 @@ const Py_TPFLAGS_HAVE_VERSION_TAG = (0x00000001 << 18)
 
 function _init_juliabase()
     empty!(_pyjlbase_methods)
+    generate_operators()
+    append!(_pyjlbase_methods, meths)
     push!(_pyjlbase_methods,
         PyMethodDef(
             ml_name = pointer(_pyjlbase_callmethod_name),
@@ -244,6 +340,8 @@ function _init_juliabase()
             tp_flags = Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_VERSION_TAG,
             tp_weaklistoffset = fieldoffset(PyJuliaValueObject, 3),
             tp_methods = pointer(_pyjlbase_methods),
+            tp_call = @cfunction(pyjl_call, C.Ptr{PyObject}, (C.Ptr{PyObject}, C.Ptr{PyObject}, C.Ptr{PyObject})),
+            tp_repr = @cfunction(pyjl_repr, C.Ptr{PyObject}, (C.Ptr{PyObject},)),
         )
 
     o = C.Ptr{PyObject}(pointer(_pyjlbase_type))
@@ -261,4 +359,159 @@ end
 function pyisjl(x::C.Ptr{PyObject})
     tpx = Py_Type(x)
     PyAPI.PyType_IsSubtype(tpx, PyJuliaBase_Type) == 1
+end
+
+
+const op_symbol_map_one_arg = Dict{String, Symbol}(
+    "__add__" => :+,
+    "__sub__" => :-,
+    "__mul__" => :*,
+    "__truediv__" => :/,
+    "__floordiv__" => :÷,
+    "__mod__" => :%,
+    "__lshift__" => :<<,
+    "__rshift__" => :>>,
+    "__and__" => :&,
+    "__xor__" => :⊻,
+    "__or__" => :|,
+    "__eq__" => :(==),
+    "__ne__" => :(!=),
+    "__le__" => :≤,
+    "__lt__" => :<,
+    "__ge__" => :≥,
+    "__gt__" => :>
+)
+
+const op_symbol_map_no_arg = Dict{String, Symbol}(
+    "__len__" => :length,
+    "__neg__" => :-,
+    "__pos__" => :+,
+    "__invert__" => :~,
+    "__abs__" => :abs,
+    "__hash__" => :hash,
+    "__bool__" => :pyjl_bool,
+    "__dir__" => :pyjl_dir
+)
+
+function pyjl_bool(self)
+    if self isa Number
+        return py_cast(Py, o != 0)
+    end
+    if (self isa AbstractArray || self isa AbstractDict ||
+        self isa AbstractSet || self isa AbstractString)
+        return py_cast(Py, !isempty(o))
+    end
+    # return `true` is the default semantics of a Python object
+    return py_cast(Py, true)
+end
+
+function pyjl_dir(self)
+    dir_list = G_PyBuiltin.list()
+    for k in propertynames(self, true)
+        dir_list.append(attribute_symbol_to_pyobject(k))
+    end
+    return dir_list
+end
+
+function pyjl_dir(self::Module)
+    ks = Symbol[]
+    append!(ks, names(self, all = true, imported = true))
+    for m in ccall(:jl_module_usings, Any, (Any,), self)::Vector
+        append!(ks, names(m))
+    end
+    dir_list = G_PyBuiltin.list()
+    for k in ks
+        dir_list.append(attribute_symbol_to_pyobject(k))
+    end
+    return dir_list
+end
+
+const meths = Vector{PyMethodDef}()
+
+function generate_cfunc_one_arg(pyfname::Symbol, op::Symbol)
+    quote
+        function $pyfname(self_::$C.Ptr{$PyObject}, other_::$C.Ptr{$PyObject})
+            if $PyJuliaValue_IsNull(self_)
+                $py_seterror!($G_PyBuiltin.TypeError, "Julia object is NULL")
+                return $Py_NULLPTR
+            end
+            self = $PyJuliaValue_GetValue(self_)
+            py_tp = $Py_Type(other_)
+            t = $get($PyTypeDict, py_tp, $Py)
+            if t !== $Py
+                other = $auto_unbox(t, $Py($BorrowReference(), other_))
+                try
+                    ans = $op(self, other)
+                    out = $unsafe_unwrap($py_cast($Py, ans))
+                    $PyAPI.Py_IncRef(out)
+                    return out
+                catch e
+                    $handle_except(e)
+                end
+            else
+                out = $unsafe_unwrap($G_PyBuiltin.NotImplemented)
+                PyAPI.Py_IncRef(out)
+                return out
+            end
+        end
+    end
+end
+
+function generate_cfunc_no_arg(pyfname::Symbol, op::Symbol)
+    quote
+        function $pyfname(self_::$C.Ptr{$PyObject}, ::$C.Ptr{$PyObject})
+            if $PyJuliaValue_IsNull(self_)
+                $py_seterror!($G_PyBuiltin.TypeError, "Julia object is NULL")
+                return $Py_NULLPTR
+            end
+            self = $PyJuliaValue_GetValue(self_)
+            try
+                ans = $op(self)
+                out = $unsafe_unwrap($py_cast($Py, ans))
+                $PyAPI.Py_IncRef(out)
+                return out
+            catch e
+                $handle_except(e)
+            end
+        end
+    end
+end
+
+function push_meths_one_arg(pyfname_string_name::String, pyfname::Symbol)
+    quote
+        push!($meths,
+            $PyMethodDef(
+                ml_name = $pointer($pyfname_string_name),
+                ml_meth = @cfunction($pyfname, $C.Ptr{$PyObject}, ($C.Ptr{$PyObject}, $C.Ptr{$PyObject})),
+                ml_flags = $Py_METH_O,
+            ),
+        )
+    end
+end
+
+function push_meths_no_arg(pyfname_string_name::String, pyfname::Symbol)
+    quote
+        push!($meths,
+            $PyMethodDef(
+                ml_name = $pointer($pyfname_string_name),
+                ml_meth = @cfunction($pyfname, $C.Ptr{$PyObject}, ($C.Ptr{$PyObject}, $C.Ptr{$PyObject})),
+                ml_flags = $Py_METH_NOARGS,
+            ),
+        )
+    end
+end
+
+
+function generate_operators()
+    empty!(meths)
+    for (k, v) in op_symbol_map_one_arg
+        pyfname = Symbol(k, "##", "_pyfunc")
+        eval(generate_cfunc_one_arg(pyfname, v))
+        eval(push_meths_one_arg(k, pyfname))
+    end
+    for (k, v) in op_symbol_map_no_arg
+        pyfname = Symbol(k, "##", "_pyfunc")
+        eval(generate_cfunc_no_arg(pyfname, v))
+        eval(push_meths_no_arg(k, pyfname))
+    end
 end

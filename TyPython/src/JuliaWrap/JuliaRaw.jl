@@ -9,30 +9,6 @@ function attribute_string_to_symbol(x::String)
     end
 end
 
-pyjlraw_repr(self) = py_cast(Py, "<jl $(repr(self))>")
-pyjlraw_name(self) = attribute_symbol_to_pyobject(nameof(self))
-
-function pyjlraw_dir(self)
-    dir_list = G_PyBuiltin.list()
-    for k in propertynames(self, true)
-        dir_list.append(attribute_symbol_to_pyobject(k))
-    end
-    return dir_list
-end
-
-function pyjlraw_dir(self::Module)
-    ks = Symbol[]
-    append!(ks, names(self, all = true, imported = true))
-    for m in ccall(:jl_module_usings, Any, (Any,), self)::Vector
-        append!(ks, names(m))
-    end
-    dir_list = G_PyBuiltin.list()
-    for k in ks
-        dir_list.append(attribute_symbol_to_pyobject(k))
-    end
-    return dir_list
-end
-
 function pyjlraw_getattr(self, k_::Py)
     k = attribute_string_to_symbol(py_coerce(String, k_))
     py_cast(Py, getproperty(self, k))
@@ -64,18 +40,6 @@ function pyjlraw_setitem(self, item::Py, val::Py)::Py
         setindex!(self, auto_unbox(val), auto_unbox(item))
     end
     return py_cast(Py, nothing)
-end
-
-function pyjlraw_bool(self)
-    if self isa Number
-        return py_cast(Py, o != 0)
-    end
-    if (self isa AbstractArray || self isa AbstractDict ||
-        self isa AbstractSet || self isa AbstractString)
-        return py_cast(Py, !isempty(o))
-    end
-    # return `true` is the default semantics of a Python object
-    return py_cast(Py, true)
 end
 
 
@@ -113,20 +77,6 @@ function (op::pyjlraw_revop)(self, other_::Py)
     end
 end
 
-function pyjlraw_call(self, pyargs::Py, pykwargs::Py)
-    nargs = PyAPI.PyTuple_Size(pyargs)
-    nkwargs = PyAPI.PyDict_Size(pykwargs)
-    if nkwargs > 0
-        args = auto_unbox_args(pyargs, nargs)
-        kwargs = auto_unbox_kwargs(pykwargs, nkwargs)
-        return py_cast(Py, self(args...; kwargs...))
-    elseif nargs > 0
-        args = auto_unbox_args(pyargs, nargs)
-        return py_cast(Py, self(args...))
-    else
-        return py_cast(Py, self())
-    end
-end
 
 function auto_unbox_args(pyargs::Py, nargs::Int)
     args = Vector{Any}(undef, nargs)
@@ -187,11 +137,6 @@ function _init_jlraw()
     $("\n"^(@__LINE__()-1))
     class JuliaRaw(JuliaBase):
         __slots__ = ()
-        def __repr__(self):
-            if self._jl_isnull():
-                return "<jl NULL>"
-            else:
-                return self._jl_callmethod($(pyjl_methodnum(pyjlraw_repr)))
         def __getattr__(self, k):
             return self._jl_callmethod($(pyjl_methodnum(pyjlraw_getattr)), k)
         def __setattr__(self, k, v):
@@ -200,93 +145,13 @@ function _init_jlraw()
             return self._jl_callmethod($(pyjl_methodnum(pyjlraw_getitem)), k)
         def __setitem__(self, k, v):
             return self._jl_callmethod($(pyjl_methodnum(pyjlraw_setitem)), k, v)
-        def __dir__(self):
-            return JuliaBase.__dir__(self) + self._jl_callmethod($(pyjl_methodnum(pyjlraw_dir)))
-        def __call__(self, *args, **kwargs):
-           return self._jl_callmethod($(pyjl_methodnum(pyjlraw_call)), args, kwargs)
-        def __len__(self):
-           return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(length))))
-        def __pos__(self):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(+))))
-        def __neg__(self):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(-))))
-        def __abs__(self):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(abs))))
-        def __invert__(self):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(~))))
-        def __add__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(+))), other)
-        def __sub__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(-))), other)
-        def __mul__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(*))), other)
-        def __truediv__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(/))), other)
-        def __floordiv__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(÷))), other)
-        def __mod__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(%))), other)
-        def __pow__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(^))), other)
-        def __lshift__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(<<))), other)
-        def __rshift__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(>>))), other)
-        def __and__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(&))), other)
-        def __xor__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(⊻))), other)
-        def __or__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(|))), other)
-        def __radd__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(+))), other)
-        def __rsub__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(-))), other)
-        def __rmul__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(*))), other)
-        def __rtruediv__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(/))), other)
-        def __rfloordiv__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(÷))), other)
-        def __rmod__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(%))), other)
-        def __rpow__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(^))), other)
-        def __rlshift__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(<<))), other)
-        def __rrshift__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(>>))), other)
-        def __rand__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(&))), other)
-        def __rxor__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(⊻))), other)
-        def __ror__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_revop(|))), other)
-        def __eq__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(==))), other)
-        def __ne__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(!=))), other)
-        def __le__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(≤))), other)
-        def __lt__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(<))), other)
-        def __ge__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(≥))), other)
-        def __gt__(self, other):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(>))), other)
-        def __hash__(self):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(hash))))
-        def __bool__(self):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_bool)))
         def __iter__(self):
             pair = self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(iterate))))
             while pair is not None:
                 element, state = pair
                 yield element
                 pair = self._jl_callmethod($(pyjl_methodnum(pyjlraw_op(iterate))), state)
-        @property
-        def __name__(self):
-            return self._jl_callmethod($(pyjl_methodnum(pyjlraw_name)))
+
     """), py_cast(Py,@__FILE__()), py_cast(Py, "exec")), G_jnumpy.__dict__)
 end
 

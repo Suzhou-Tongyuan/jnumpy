@@ -49,7 +49,6 @@ end
     @test a.x == 3
     @test py_cast(Int, pya.__dir__().__len__()) > 0
     @test py_cast(Int, py_cast(Py, CPython).__dir__().__len__()) > 0
-    @test py_cast(String, py_cast(Py, CPython).__name__) == "CPython"
     @test_throws CPython.PyException pya.__add__(pya)
     @test pya[py_cast(Py, 1)] == py_cast(Py, 3)
     pya[py_cast(Py, 1)] = py_cast(Py, 1)
