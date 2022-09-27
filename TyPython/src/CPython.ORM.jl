@@ -17,13 +17,6 @@ end
     value
 end
 
-function py_for(f, py::Py)
-    py_iter = G_PyBuiltin.iter(py)
-    while (item = PyAPI.PyIter_Next(py_iter)) != Py_NULLPTR
-        f(Py(BorrowReference(), item))
-    end
-end
-
 """
     py_tuple_create(py::Py...)
 
