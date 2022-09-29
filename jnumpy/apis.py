@@ -44,7 +44,7 @@ def activate_project_checked(project_dir: str):
     exec_julia(
         f"InitTools.activate_project({escape_to_julia_rawstr(project_dir)},"
         f"{escape_to_julia_rawstr(TyPython_directory)})",
-        use_gil=False,
+        use_gil=True,
     )
     try:
         yield
@@ -52,7 +52,7 @@ def activate_project_checked(project_dir: str):
         exec_julia(
             f"InitTools.activate_project({escape_to_julia_rawstr(SessionCtx.DEFAULT_PROJECT_DIR)},"
             f"{escape_to_julia_rawstr(TyPython_directory)})",
-            use_gil=False,
+            use_gil=True,
         )
 
 

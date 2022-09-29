@@ -206,10 +206,19 @@ def init_jl(experimental_fast_init=False):
                 )
             except JuliaError:
                 pass
-            exec_julia(
-                f"InitTools.force_resolve({escape_to_julia_rawstr(TyPython_directory)})",
-                use_gil=False,
-            )
+            try:
+                # log julia's error in a IOBuffer, because we can't redirect error to python in this step
+                exec_julia(
+                    f"InitTools.force_resolve({escape_to_julia_rawstr(TyPython_directory)}, log_error=true)",
+                    use_gil=False,
+                )
+            except JuliaError:
+                # show error message in IOBuffer
+                exec_julia(
+                    "InitTools.show_error_log()",
+                    use_gil=False,
+                )
+                raise JuliaError("failed to setup julia environment, check the julia error message above.")
         try:
             exec_julia(
                 rf"""
