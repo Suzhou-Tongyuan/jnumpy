@@ -62,12 +62,14 @@ def test_mat_mul(dtype):
     assert actual.dtype == desired.dtype
     np.testing.assert_array_almost_equal(actual, desired, decimal=5)
 
+
 def test_bool_array():
     x = np.asarray([[True, False], [True, False]])
-    x_int = x.astype('i')
+    x_int = x.astype("i")
     actual = mat_mul(x, x)
     desired = x_int @ x_int
     assert np.all(actual == desired)
+
 
 def test_set_zero():
     x = np.random.rand(2)
@@ -81,14 +83,13 @@ def test_fft():
     desired = np.fft.fft(x)
     np.testing.assert_array_almost_equal(actual, desired)
 
+
 def test_subprocess():
     assert os.getenv("TYPY_PY_APIPTR")
     cmd = [
         "python",
         "-c",
-        "import jnumpy as np; np.init_jl(); np.exec_julia(\"print(1)\")"
+        'import jnumpy as np; np.init_jl(); np.exec_julia("print(1)")',
     ]
-    out = subprocess.run(
-        cmd, check=True, capture_output=True, encoding="utf8"
-    )
+    out = subprocess.run(cmd, check=True, capture_output=True, encoding="utf8")
     assert out.stdout == "1"

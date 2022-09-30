@@ -1,6 +1,5 @@
 from __future__ import annotations
 import pathlib
-import argparse
 
 CF_TYPY_MODE = "TYPY_MODE"
 CF_TYPY_PY_APIPTR = "TYPY_PY_APIPTR"
@@ -29,6 +28,3 @@ class SessionCtx:
     JULIA_EXE: str
     DEFAULT_PROJECT_DIR: str
     JULIA_START_OPTIONS: list[str]
-
-jl_opts_parse = argparse.ArgumentParser()
-jl_opts_parse.add_argument("-J", "--sysimage", type=str, default=None)

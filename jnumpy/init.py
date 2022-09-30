@@ -2,12 +2,15 @@ from __future__ import annotations
 import io
 import os
 import pathlib
-import sys
 import subprocess
 import ctypes
 import shlex
 import contextlib
-from .utils import escape_to_julia_rawstr
+from .utils import (
+    escape_to_julia_rawstr,
+    guess_julia_init_params,
+    sysimage_parser,
+)
 from .defaults import setup_julia_exe_, get_project_args
 from .envars import (
     CF_TYPY_JL_OPTS,
@@ -19,7 +22,6 @@ from .envars import (
     TyPython_directory,
     InitTools_path,
     SessionCtx,
-    jl_opts_parse,
 )
 
 # XXX: adding an environment variable for fast debugging:
@@ -97,9 +99,8 @@ class JuliaError(Exception):
     pass
 
 
-def init_jl(experimental_fast_init=False):
-    # if experimental_fast_init is True, assume TyPython is included in sysimage
-    global _eval_jl
+def init_libjulia(init, experimental_fast_init=False):
+    # if experimental_fast_init is True, search libjulia by the releative path of julia executable
     if os.getenv(CF_TYPY_MODE) == CF_TYPY_MODE_JULIA:
         return
     elif os.getenv(CF_TYPY_MODE) == CF_TYPY_MODE_PYTHON:
@@ -110,7 +111,7 @@ def init_jl(experimental_fast_init=False):
             del os.environ[CF_TYPY_MODE]
             del os.environ[CF_TYPY_PY_APIPTR]
             del os.environ[CF_TYPY_PID]
-            init_jl()
+            init_libjulia(init, experimental_fast_init)
         return
     elif not os.getenv(CF_TYPY_MODE):
         os.environ[CF_TYPY_MODE] = CF_TYPY_MODE_PYTHON
@@ -123,37 +124,51 @@ def init_jl(experimental_fast_init=False):
     setup_julia_exe_()
     jl_opts = shlex.split(os.getenv(CF_TYPY_JL_OPTS, ""))
     jl_opts_proj = get_project_args()
-    opts, unkown_opts = jl_opts_parse.parse_known_args([jl_opts_proj, *jl_opts]) # parse arg --sysimage or -J
-    if experimental_fast_init:
+    SessionCtx.JULIA_START_OPTIONS = [jl_opts_proj, *jl_opts]
+    opts, unkown_opts = sysimage_parser.parse_known_args(
+        [jl_opts_proj, *jl_opts]
+    )  # parse arg --sysimage or -J
+
+    def fetch_julia_init_params(extra_cmd):
         cmd = [
             SessionCtx.JULIA_EXE,
-            *unkown_opts,
+            *extra_cmd,
             "--startup-file=no",
             "-O0",
             "--compile=min",
             "-e",
             julia_info_query,
         ]
+        bindir, libpath, sysimage, default_project_dir = subprocess.run(
+            cmd, check=True, capture_output=True, encoding="utf8"
+        ).stdout.splitlines()
+        return bindir, libpath, sysimage, default_project_dir
+
+    guess_result = guess_julia_init_params([jl_opts_proj, *jl_opts])
+    if not experimental_fast_init and opts.sysimage:
+        sysimage = pathlib.Path(opts.sysimage).absolute().as_posix()
+        bindir, libpath, _, default_project_dir = fetch_julia_init_params(unkown_opts)
+    elif not experimental_fast_init and not opts.sysimage:
+        bindir, libpath, sysimage, default_project_dir = fetch_julia_init_params(
+            unkown_opts
+        )
+    elif experimental_fast_init and opts.sysimage and guess_result:
+        sysimage = pathlib.Path(opts.sysimage).absolute().as_posix()
+        bindir, libpath, _, default_project_dir = guess_result
+    elif experimental_fast_init and opts.sysimage and not guess_result:
+        sysimage = pathlib.Path(opts.sysimage).absolute().as_posix()
+        bindir, libpath, _, default_project_dir = fetch_julia_init_params(unkown_opts)
+    elif experimental_fast_init and not opts.sysimage and guess_result:
+        bindir, libpath, sysimage, default_project_dir = guess_result
+    elif experimental_fast_init and not opts.sysimage and not guess_result:
+        bindir, libpath, sysimage, default_project_dir = fetch_julia_init_params(
+            unkown_opts
+        )
     else:
-        cmd = [
-            SessionCtx.JULIA_EXE,
-            jl_opts_proj,
-            *jl_opts,
-            "--startup-file=no",
-            "-O0",
-            "--compile=min",
-            "-e",
-            julia_info_query,
-        ]
-    bindir, libpath, sysimage, default_project_dir = subprocess.run(
-        cmd, check=True, capture_output=True, encoding="utf8"
-    ).stdout.splitlines()
-    SessionCtx.JULIA_START_OPTIONS = unkown_opts
+        raise Exception("Unknown error during fetch julia init params")
+
     SessionCtx.DEFAULT_PROJECT_DIR = default_project_dir
 
-    if experimental_fast_init and opts.sysimage:
-        sysimage_abs_paths = pathlib.Path(opts.sysimage).absolute().as_posix()
-        sysimage = sysimage_abs_paths
     old_cwd = os.getcwd()
     try:
         os.chdir(os.path.dirname(os.path.abspath(libpath)))
@@ -163,7 +178,9 @@ def init_jl(experimental_fast_init=False):
         except AttributeError:
             init_func = lib.jl_init_with_image__threading
 
-        argc, argv = args_from_config(SessionCtx.JULIA_EXE, SessionCtx.JULIA_START_OPTIONS)
+        argc, argv = args_from_config(
+            SessionCtx.JULIA_EXE, SessionCtx.JULIA_START_OPTIONS
+        )
         lib.jl_parse_opts(ctypes.pointer(argc), ctypes.pointer(argv))
 
         init_func.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
@@ -173,54 +190,63 @@ def init_jl(experimental_fast_init=False):
         lib.jl_eval_string.restype = ctypes.c_void_p
         lib.jl_exception_clear.restype = None
 
-        def _eval_jl(x: str, use_gil: bool):
-            with contextlib.redirect_stderr(io.StringIO()) as ef:
-                if use_gil:
-                    source_code = gil_template.format(x)
-                else:
-                    source_code = no_gil_template.format(x)
-                source_code_bytes = source_code.encode("utf8")
-                if (
-                    not lib.jl_eval_string(source_code_bytes)
-                ) and lib.jl_exception_occurred():
-                    lib.jl_exception_clear()
-                    raise JuliaError(ef.getvalue())
-                return None
-
-        exec_julia(
-            f"""
-            import Pkg
-            Pkg.activate({escape_to_julia_rawstr(default_project_dir)}, io=devnull)
-            include({escape_to_julia_rawstr(InitTools_path)})
-        """,
-            use_gil=False,
-        )
-
-        try:
-            exec_julia("import TyPython", use_gil=False)
-        except JuliaError:
-            try:
-                exec_julia(
-                    f"InitTools.setup_environment({escape_to_julia_rawstr(TyPython_directory)})",
-                    use_gil=False,
-                )
-            except JuliaError:
-                pass
-            exec_julia(
-                f"InitTools.force_resolve({escape_to_julia_rawstr(TyPython_directory)})",
-                use_gil=False,
-            )
-        try:
-            exec_julia(
-                rf"""
-                import TyPython
-                import TyPython.CPython
-                TyPython.CPython.init()
-            """,
-                use_gil=False,
-            )
-        except JuliaError:
-            raise RuntimeError("invalid julia initialization")
+        init(lib)
 
     finally:
         os.chdir(old_cwd)
+
+
+def init_jl_from_lib(lib):
+    global _eval_jl
+
+    def _eval_jl(x: str, use_gil: bool):
+        with contextlib.redirect_stderr(io.StringIO()) as ef:
+            if use_gil:
+                source_code = gil_template.format(x)
+            else:
+                source_code = no_gil_template.format(x)
+            source_code_bytes = source_code.encode("utf8")
+            if (
+                not lib.jl_eval_string(source_code_bytes)
+            ) and lib.jl_exception_occurred():
+                lib.jl_exception_clear()
+                raise JuliaError(ef.getvalue())
+            return None
+
+    exec_julia(
+        f"""
+        import Pkg
+        include({escape_to_julia_rawstr(InitTools_path)})
+    """,
+        use_gil=False,
+    )
+
+    try:
+        exec_julia("import TyPython", use_gil=False)
+    except JuliaError:
+        try:
+            exec_julia(
+                f"InitTools.setup_environment({escape_to_julia_rawstr(TyPython_directory)})",
+                use_gil=False,
+            )
+        except JuliaError:
+            pass
+        exec_julia(
+            f"InitTools.force_resolve({escape_to_julia_rawstr(TyPython_directory)})",
+            use_gil=False,
+        )
+    try:
+        exec_julia(
+            rf"""
+            import TyPython
+            import TyPython.CPython
+            TyPython.CPython.init()
+        """,
+            use_gil=False,
+        )
+    except JuliaError:
+        raise RuntimeError("invalid julia initialization")
+
+
+def init_jl(experimental_fast_init=False):
+    init_libjulia(init_jl_from_lib, experimental_fast_init)

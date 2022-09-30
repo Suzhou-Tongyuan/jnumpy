@@ -15,21 +15,25 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
   test:
-    name: Julia ${{ matrix.version }} - Python ${{ matrix.python-version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
-    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.OS }} - Julia ${{ matrix.julia-version }} - Python ${{ matrix.python-version }} - ${{ github.event_name }}
+    runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
       matrix:
-        version:
-          - '1.6'
-          - '1.7'
-        os:
-          - ubuntu-latest
-        arch:
-          - x64
-        python-version: ['3.7']
+        julia-version: ["1.6", "1.7"]
+        OS: [Ubuntu, macOS, Windows]
+        python-version: ["3.7"]
+        include:
+          - os: Ubuntu
+            image: ubuntu-22.04
+          - os: Windows
+            image: windows-2022
+          - os: macOS
+            image: macos-12
+      fail-fast: false
+    defaults:
+      run:
+        shell: bash
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -40,7 +44,6 @@ jobs:
         uses: actions/setup-python@v4.2.0
         with:
           python-version: ${{ matrix.python-version }}
-          architecture: ${{ matrix.arch }}
           
       # Runs a single command using the runners shell
       - name: insatll jnumpy
@@ -58,8 +61,7 @@ jobs:
       - name: Setup Julia environment
         uses: julia-actions/setup-julia@v1
         with:
-          version: ${{ matrix.version }}
-          arch: ${{ matrix.arch }}
+          version: ${{ matrix.julia-version }}
 
       - uses: actions/cache@v1
         env:
@@ -72,8 +74,11 @@ jobs:
             ${{ runner.os }}-test-
             ${{ runner.os }}-
 
-      - name: run pytest
-        run: python -m pytest ./jnumpy/tests/test_core.py
+      - name: run pytest test_core.py
+        run: python -m pytest jnumpy/tests/test_core.py
+
+      - name: run pytest test_fast_init.py
+        run: python -m pytest jnumpy/tests/test_fast_init.py
 
       - name: Run Julia package tests
         uses: julia-actions/julia-runtest@v1
