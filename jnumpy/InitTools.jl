@@ -34,7 +34,7 @@ function setup_environment(typython_dir::AbstractString; log_error::Bool=false)
         end
     catch e
         log_error && Base.showerror(Error_Logger, e, catch_backtrace())
-        rethrow(e)
+        rethrow()
     end
     nothing
 end
@@ -56,7 +56,7 @@ Removing and re-adding works.
         Pkg.instantiate()
     catch e
         log_error && Base.showerror(Error_Logger, e, catch_backtrace())
-        rethrow(e)
+        rethrow()
     end
     nothing
 end
