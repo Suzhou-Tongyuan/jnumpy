@@ -4,6 +4,7 @@ import subprocess
 import shutil
 import jnumpy.envars as envars
 import warnings
+import pathlib
 
 
 def get_jnumpy_dir():
@@ -24,7 +25,9 @@ def setup_julia_exe_():
     julia_exepath = os.getenv("TYPY_JL_EXE")
     if not julia_exepath:
         julia_exepath = get_default_julia_exe()
-    envars.SessionCtx.JULIA_EXE = julia_exepath
+    envars.SessionCtx.JULIA_EXE = (
+        pathlib.Path(julia_exepath).resolve().as_posix()
+    )  # resolve symlink
     return
 
 
