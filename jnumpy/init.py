@@ -124,7 +124,7 @@ def init_libjulia(init, experimental_fast_init=False):
     setup_julia_exe_()
     jl_opts = shlex.split(os.getenv(CF_TYPY_JL_OPTS, ""))
     jl_opts_proj = get_project_args()
-    SessionCtx.JULIA_START_OPTIONS = [jl_opts_proj, *jl_opts]
+    SessionCtx.JULIA_START_OPTIONS = ["--handle-signals=no", jl_opts_proj, *jl_opts]
     opts, unkown_opts = sysimage_parser.parse_known_args(
         [jl_opts_proj, *jl_opts]
     )  # parse arg --sysimage or -J
