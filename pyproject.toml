@@ -1,12 +1,13 @@
 [tool.poetry]
 name = "julia-numpy"
-version = "0.4.4"
+version = "0.4.5"
 description = "Writing Python C extensions in Julia within 5 minutes."
 authors = ["thautwarm <twshere@outlook.com>"]
 maintainers = ["songjhaha <songjh96@foxmail.com>"]
 homepage = "https://github.com/Suzhou-Tongyuan/jnumpy"
 packages = [{include = "jnumpy"}]
 include = ["jnumpy/TyPython/Project.toml", "jnumpy/TyPython/src/*.jl"]
+license = "MIT"
 
 [tool.poetry.dependencies]
 python = "^3.7"
