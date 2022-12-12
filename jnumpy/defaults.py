@@ -35,7 +35,7 @@ def check_valid_julia_exe(julia_exepath):
     if julia_exepath:
         try:
             ver_cmd = [julia_exepath, "--version"]
-            subprocess.check_output(ver_cmd)
+            subprocess.check_call(ver_cmd, stdout=subprocess.DEVNULL)
         except subprocess.CalledProcessError:
             return None
     return julia_exepath
