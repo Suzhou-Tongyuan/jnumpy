@@ -1,7 +1,7 @@
 name = "TyPython"
 uuid = "9c4566a2-237d-4c69-9a5e-9d27b7d0881b"
 authors = ["thautwarm <twshere@outlook.com>"]
-version = "0.2.3"
+version = "0.2.4"
 
 [deps]
 IOCapture = "b5f81e59-6552-4d32-b1f0-c071b021bf89"
