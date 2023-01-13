@@ -81,6 +81,8 @@ mutable struct PythonAPIStruct
     PyUnicode_FromString::cfunc_t(Cstring, Except(Py_NULLPTR, C.Ptr{PyObject})) # except NULL
     PyUnicode_AsUTF8AndSize::cfunc_t(C.Ptr{PyObject}, Ptr{Py_ssize_t}, Except(C_NULL, Ptr{Cchar}))
     PyUnicode_FromStringAndSize::cfunc_t(Cstring, Py_ssize_t, Except(Py_NULLPTR, C.Ptr{PyObject})) # except NULL
+    PyBytes_FromStringAndSize::cfunc_t(C.Ptr{Cchar}, Py_ssize_t, Except(Py_NULLPTR, C.Ptr{PyObject})) # except NULL
+    PyBytes_AsStringAndSize::cfunc_t(C.Ptr{PyObject}, Ptr{Ptr{Cchar}}, Ptr{Py_ssize_t}, Except(-1, Cint)) # except -1
     PyErr_Print::cfunc_t(Cvoid) # no except
     PyErr_Occurred::cfunc_t(C.Ptr{PyObject}) # not set -> NULL
     PyErr_SetString::cfunc_t(C.Ptr{PyObject}, Cstring, Cvoid) # no except
@@ -105,11 +107,17 @@ mutable struct PythonAPIStruct
     PyDict_New::cfunc_t(Except(Py_NULLPTR, C.Ptr{PyObject})) # except NULL
     PyDict_SetItem::cfunc_t(C.Ptr{PyObject}, C.Ptr{PyObject}, C.Ptr{PyObject}, Except(-1, Cint)) # except -1
     PyDict_Type::C.Ptr{PyObject}
+    PyDict_Size::cfunc_t(C.Ptr{PyObject}, Py_ssize_t)
+    PyDict_Keys::cfunc_t(C.Ptr{PyObject}, C.Ptr{PyObject})
+    PyDict_Values::cfunc_t(C.Ptr{PyObject}, C.Ptr{PyObject})
+    PyList_GetItem::cfunc_t(C.Ptr{PyObject}, Py_ssize_t, Except(Py_NULLPTR, C.Ptr{PyObject}))
 
     PyLong_Type::C.Ptr{PyObject}
     PyFloat_Type::C.Ptr{PyObject}
     PyComplex_Type::C.Ptr{PyObject}
     PyTuple_Type::C.Ptr{PyObject}
+    PyType_Ready::cfunc_t(C.Ptr{PyObject}, Cint) # except -1
+    PyType_IsSubtype::cfunc_t(C.Ptr{PyObject}, C.Ptr{PyObject}, Cint)
 
     PyLong_AsLongLong::cfunc_t(C.Ptr{PyObject}, Clonglong) # except -1 ana error occurred
     PyLong_FromLongLong::cfunc_t(Clonglong, Except(Py_NULLPTR, C.Ptr{PyObject})) # except -1 ana error occurred
