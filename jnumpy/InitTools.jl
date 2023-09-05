@@ -5,7 +5,6 @@ import UUIDs
 @nospecialize
 
 function check_if_typython_installed(typython_dir::AbstractString)
-    VERSION >= v"1.9" && error("Support for Julia 1.9 is coming soon.")
     VERSION < v"1.6" && error("TyPython works for Julia >= 1.6!")
     CTX = Pkg.API.Context()
     uuid_TyPython = UUIDs.UUID("9c4566a2-237d-4c69-9a5e-9d27b7d0881b")
