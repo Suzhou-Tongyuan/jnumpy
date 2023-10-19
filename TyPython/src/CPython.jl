@@ -1,5 +1,7 @@
 module CPython
-using MLStyle: @match, @switch
+import TyPython: DevOnly
+DevOnly.@devonly using MLStyle: @switch
+
 import LinearAlgebra
 import TyPython.C
 import TyPython.Utils: capture_out, unroll_do!, @suppress_error
