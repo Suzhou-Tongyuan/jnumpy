@@ -86,7 +86,7 @@ include("CPython.APIs.jl")
 include("CPython.Boot.jl")
 include("CPython.ORM.jl")
 
-const G_ATTR_SYM_MAP = Dict{Symbol, Py}()
+const G_ATTR_SYM_MAP = Dict{Symbol,Py}()
 const G_OB_POOL = Any[]
 
 let ln = LineNumberNode((@__LINE__), Symbol(@__FILE__))
@@ -109,5 +109,7 @@ function __init__()
     __init_numpy__()
     __init_julia_wrap__()
 end
+
+precompile(init, ())
 
 end
