@@ -4,7 +4,7 @@ implementing necessary utilities to create CPython extensions.
 using TyPython.Reflection
 import TyPython
 import TyPython.Utils
-import MacroTools: @q
+
 export @export_py, @export_pymodule, Pyfunc
 
 const refl = Reflection
