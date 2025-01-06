@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        julia-version: ["1.6", "1.9"]
+        julia-version: ["1.6", "1.9", "1.11"]
         OS: [Ubuntu, macOS, Windows]
         python-version: ["3.7"]
         include:
