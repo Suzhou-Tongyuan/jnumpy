@@ -7,12 +7,14 @@ version = "0.2.6"
 IOCapture = "b5f81e59-6552-4d32-b1f0-c071b021bf89"
 Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+REPL = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 SHA = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 
 [compat]
 IOCapture = "0.2"
+REPL = "1.11.0"
 julia = "1.6"
 
 [extras]
