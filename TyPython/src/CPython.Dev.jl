@@ -4,6 +4,7 @@ implementing necessary utilities to create CPython extensions.
 using TyPython.Reflection
 import TyPython
 import TyPython.Utils
+import Base.doc
 
 export @export_py, @export_pymodule, Pyfunc
 
