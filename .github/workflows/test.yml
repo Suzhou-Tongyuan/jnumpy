@@ -22,7 +22,7 @@ jobs:
       matrix:
         julia-version: ["1.6", "1.9", "1.11"]
         OS: [Ubuntu, macOS, Windows]
-        python-version: ["3.7"]
+        python-version: ["3.11"]
         include:
           - os: Ubuntu
             image: ubuntu-22.04
