@@ -4,6 +4,8 @@ import UUIDs
 
 @nospecialize
 
+const Error_Logger = IOBuffer()
+
 function check_if_typython_installed(typython_dir::AbstractString)
     VERSION < v"1.6" && error("TyPython works for Julia >= 1.6!")
     CTX = Pkg.API.Context()
@@ -22,11 +24,16 @@ function _develop_typython(typython_dir::AbstractString)
     nothing
 end
 
-function setup_environment(typython_dir::AbstractString)
-    if !check_if_typython_installed(typython_dir)
-        _develop_typython(typython_dir)
-        Pkg.resolve()
-        Pkg.instantiate()
+function setup_environment(typython_dir::AbstractString; log_error::Bool=false)
+    try
+        if !check_if_typython_installed(typython_dir)
+            _develop_typython(typython_dir)
+            Pkg.resolve()
+            Pkg.instantiate()
+        end
+    catch e
+        log_error && Base.showerror(Error_Logger, e, catch_backtrace())
+        rethrow()
     end
     nothing
 end
@@ -36,20 +43,31 @@ end
 The precompiled file goes wrong for unknown reason.
 Removing and re-adding works.
 """
-@noinline function force_resolve(typython_dir::AbstractString)
+@noinline function force_resolve(typython_dir::AbstractString; log_error::Bool=false)
     try
         Pkg.rm("TyPython", io=devnull)
     catch
     end
-    Pkg.develop(path=typython_dir, io=devnull)
-    Pkg.resolve()
-    Pkg.instantiate()
+
+    try
+        Pkg.develop(path=typython_dir, io=devnull)
+        Pkg.resolve()
+        Pkg.instantiate()
+    catch e
+        log_error && Base.showerror(Error_Logger, e, catch_backtrace())
+        rethrow()
+    end
     nothing
 end
 
-@noinline function activate_project(project_dir::AbstractString, typython_dir::AbstractString)
+@noinline function activate_project(project_dir::AbstractString, typython_dir::AbstractString; log_error::Bool=false)
     Pkg.activate(project_dir, io=devnull)
-    force_resolve(typython_dir)
+    force_resolve(typython_dir, log_error=log_error)
+    nothing
+end
+
+function show_error_log()
+    println(stderr, String(take!(Error_Logger)))
     nothing
 end
 
