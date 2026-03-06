@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        julia-version: ["1.6", "1.9", "1.11"]
+        julia-version: ["1.6", "1.9", "1.11", "1.12"]
         OS: [Ubuntu, macOS, Windows]
         python-version: ["3.11"]
         include:
@@ -75,10 +75,10 @@ jobs:
             ${{ runner.os }}-
 
       - name: run pytest test_core.py
-        run: python -m pytest jnumpy/tests/test_core.py
+        run: JULIA_NUM_THREADS=8 python -m pytest jnumpy/tests/test_core.py
 
       - name: run pytest test_fast_init.py
-        run: python -m pytest jnumpy/tests/test_fast_init.py
+        run: JULIA_NUM_THREADS=8 python -m pytest jnumpy/tests/test_fast_init.py
 
       - name: Run Julia package tests
         uses: julia-actions/julia-runtest@v1

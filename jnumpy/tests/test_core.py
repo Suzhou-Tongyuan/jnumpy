@@ -8,6 +8,7 @@ from jnumpy.tests.extension import (
     mat_mul,
     set_zero,
     jl_fft,
+    jl_run_threads,
 )
 import os
 import subprocess
@@ -82,6 +83,17 @@ def test_fft():
     actual = jl_fft(x)
     desired = np.fft.fft(x)
     np.testing.assert_array_almost_equal(actual, desired)
+
+def test_jl_run_threads():
+    # It may crash with JULIA_NUM_THREADS=8 in TyPython v0.2.6
+    for i in range(1000):
+        x = np.exp(np.pi * np.arange(200) / 200)
+        actual = jl_run_threads(x)
+        np.testing.assert_array_almost_equal(actual.size, x.size)
+    for i in range(1000):
+        x = np.exp(np.pi * np.arange(200) / 200)
+        actual = jl_run_threads(x)
+        np.testing.assert_array_almost_equal(actual.size, x.size)
 
 
 def test_subprocess():

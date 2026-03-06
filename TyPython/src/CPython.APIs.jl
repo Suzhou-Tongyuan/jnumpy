@@ -12,19 +12,13 @@ mutable struct Py
     end
     function Py(::UnsafeNew, ptr::C.Ptr{PyObject}=Py_NULLPTR)
         self = new(ptr)
-        finalizer(self) do x
-            if RT_is_initialized()
-                WITH_GIL(GILNoRaise()) do
-                    PyAPI.Py_DecRef(x)
-                end
-            end
-        end
+        finalizer(safe_pydecref, self)
+        _destroy_deferred_list()
         return self
     end
 end
 
 Py(ptr::C.Ptr{PyObject}) = Py(UnsafeNew(), ptr)
-const G_PyBuiltin = Py(UnsafeNew())
 
 function get_py_builtin()
     return G_PyBuiltin
@@ -34,6 +28,57 @@ function Py(::NewReference, ptr::C.Ptr{PyObject})
     PyAPI.Py_IncRef(ptr)
     return Py(UnsafeNew(), ptr)
 end
+
+const G_deferred_destroy_pointers = C.Ptr{PyObject}[]
+const deferred_destroy_lock = ReentrantLock() # lock protecting the deferred_destroy_plans list
+
+function _destroy_deferred_list()
+    lock(deferred_destroy_lock)
+    try
+        if Base.Threads.threadid() != 1
+            return
+        else
+            if !isempty(G_deferred_destroy_pointers)
+                for v in G_deferred_destroy_pointers
+                    unsafe_pydecref(v)
+                end
+                empty!(G_deferred_destroy_pointers)
+            end
+        end
+    finally
+        unlock(deferred_destroy_lock)
+    end
+end
+
+function unsafe_pydecref(obj_ptr::C.Ptr{PyObject})
+    if obj_ptr == Py_NULLPTR
+        return
+    end
+    if RT_is_initialized()
+        WITH_GIL(GILNoRaise()) do
+            PyAPI.Py_DecRef(obj_ptr)
+        end
+    end
+    return
+end
+
+@noinline function safe_pydecref(obj::Py)
+    obj_ptr = getfield(obj, :ptr)
+    safe_pydecref(obj_ptr)
+    setfield!(obj, :ptr, Py_NULLPTR)
+end
+
+@noinline function safe_pydecref(obj_ptr::C.Ptr{PyObject})
+    while !trylock(deferred_destroy_lock)
+
+        GC.safepoint()
+    end
+
+    push!(G_deferred_destroy_pointers, obj_ptr)
+    unlock(deferred_destroy_lock)
+end
+
+const G_PyBuiltin = Py(UnsafeNew())
 
 unsafe_unwrap(x::Py) = getfield(x, :ptr)
 unsafe_unwrap(x::C.Ptr{PyObject}) = x

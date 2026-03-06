@@ -98,6 +98,19 @@ def exec_julia(x, use_gil: bool = True):
 class JuliaError(Exception):
     pass
 
+def get_julia_threadnum_env():
+    env_str = os.getenv("JULIA_NUM_THREADS")
+    num = 1
+    if env_str is not None:
+        try:
+            num = int(env_str)
+        except:
+            if env_str == 'auto':
+                num = -1
+            else:
+                num = 1
+    return num
+
 
 def init_libjulia(init, experimental_fast_init=False):
     # if experimental_fast_init is True, search libjulia by the releative path of julia executable
@@ -124,7 +137,12 @@ def init_libjulia(init, experimental_fast_init=False):
     setup_julia_exe_()
     jl_opts = shlex.split(os.getenv(CF_TYPY_JL_OPTS, ""))
     jl_opts_proj = get_project_args()
-    SessionCtx.JULIA_START_OPTIONS = ["--handle-signals=no", jl_opts_proj, *jl_opts]
+    # Julia use SIGSEGV to implement GC safepoint mechanism, which would crash python process
+    # see https://github.com/JuliaPy/PythonCall.jl/issues/219#issuecomment-1605087024
+    if get_julia_threadnum_env() == 1:
+        SessionCtx.JULIA_START_OPTIONS = ["--handle-signals=no", jl_opts_proj, *jl_opts]
+    else:
+        SessionCtx.JULIA_START_OPTIONS = ["--handle-signals=yes", jl_opts_proj, *jl_opts]
     opts, unkown_opts = sysimage_parser.parse_known_args(
         [jl_opts_proj, *jl_opts]
     )  # parse arg --sysimage or -J
@@ -181,7 +199,7 @@ def init_libjulia(init, experimental_fast_init=False):
         argc, argv = args_from_config(
             SessionCtx.JULIA_EXE, SessionCtx.JULIA_START_OPTIONS
         )
-        lib.jl_parse_opts(ctypes.pointer(argc), ctypes.pointer(argv))
+        lib.jl_parse_opts(ctypes.pointer(argc), ctypes.pointer(argv)) # type: ignore
 
         init_func.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
         init_func.restype = None

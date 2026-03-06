@@ -41,6 +41,16 @@ end
     return FFTW.fft(x)
 end
 
+@export_py function jl_run_threads(x::StridedVector)::StridedVector{ComplexF64}
+    out = similar(x, ComplexF64)
+    ref_x = Ref{Any}(collect(x))
+    Base.Threads.@threads for i in eachindex(x)
+        tmp = rand(20)
+        out[i] = sum(ref_x[]) + sum(tmp) * im
+    end
+    return out
+end
+
 
 function init()
     @export_pymodule _extension begin
@@ -53,9 +63,11 @@ function init()
         mat_mul = Pyfunc(mat_mul)
         set_zero = Pyfunc(set_zero)
         jl_fft = Pyfunc(jl_fft)
+        jl_run_threads = Pyfunc(jl_run_threads)
     end
+
 end
 
-precompile(init, ())
+# precompile(init, ())
 
 end
