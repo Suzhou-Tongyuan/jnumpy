@@ -13,4 +13,5 @@ from _extension import (
     mat_mul,
     set_zero,
     jl_fft,
+    jl_run_threads,
 )
